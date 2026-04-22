@@ -11,5 +11,6 @@ public interface SimulationListener {
     void onPacketLost(Packet packet);
     void onTcpStateChanged(Endpoint endpoint, TcpState newState);
     void onMessageDelivered(String message);
+    void onScenarioCompleted();
     void onReset();
 }

@@ -17,9 +17,11 @@ Aplicación educativa para visualizar TCP y UDP de forma didáctica: handshake, 
 - **Interfaz docente**
   - Paquetes tipo tarjeta con color por protocolo/estado
   - Buzón visual de paquetes para cliente y servidor (no desaparecen)
+  - Navegación de simulación paso a paso (`Paso <-` / `Paso ->`)
   - Panel de detalle del paquete seleccionado
   - Log de eventos con prefijos (`[SEND]`, `[ACK]`, `[LOST]`, `[RETRY]`, `[STATE]`)
   - Control de tamaño de ventana (manual + presets)
+  - Inicio por defecto maximizado (pantalla completa de ventana)
 
 ## Requisitos
 
@@ -41,6 +43,8 @@ jpackage --version
 mvn clean javafx:run
 ```
 
+La app abre por defecto maximizada. Si quieres un tamaño concreto, usa los controles de `Ancho`, `Alto`, `Preset ventana` y `Aplicar tamaño`.
+
 ## Icono de la app
 
 - El proyecto incluye **ambos formatos**:
@@ -61,79 +65,96 @@ convert icono.png -define icon:auto-resize=256,128,64,48,32,16 icono.ico
 - `Fragmento (1,2,3...)`: tamaño del segmento TCP / datagrama UDP
 - `Ancho` y `Alto ventana`: tamaño manual
 - `Preset ventana`: resoluciones rápidas
+- Al terminar la simulación aparece el bloque `Revisión`:
+  - `|<`: ir al primer paso
+  - `Paso <-`: retroceder un paso
+  - `Paso ->`: avanzar un paso
+  - `>|`: ir al último paso
 
-## Crear aplicación instalable
+## Organización de artefactos
 
-### 1) Compilar y preparar artefactos
+Estructura recomendada (ya creada):
 
-Desde la raíz del proyecto:
+- `artifacts/linux/app-image/`
+- `artifacts/linux/deb/`
+- `artifacts/windows/exe/`
+- `scripts/package-linux.sh`
+- `scripts/package-windows.ps1`
 
-```bash
-mvn clean package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist
-cp target/tcp-udp-simulator-java-1.0.0.jar target/dist/
-```
+## Generar instaladores
 
-> En Windows, reemplaza `cp` por `copy`.
-
----
-
-## Linux (AppImage/DEB)
-
-### Opción A: App Image (portable)
-
-```bash
-jpackage \
-  --type app-image \
-  --name TCP-UDP-Simulator \
-  --input target/dist \
-  --main-jar tcp-udp-simulator-java-1.0.0.jar \
-  --main-class com.example.simulator.Main \
-  --icon icono.png
-```
-
-Ejecutable resultante:
+### Linux (.deb y app-image)
 
 ```bash
-./TCP-UDP-Simulator/bin/TCP-UDP-Simulator
+./scripts/package-linux.sh
 ```
 
-### Opción B: Paquete `.deb`
+Salida:
 
-```bash
-jpackage \
-  --type deb \
-  --name tcp-udp-simulator \
-  --input target/dist \
-  --main-jar tcp-udp-simulator-java-1.0.0.jar \
-  --main-class com.example.simulator.Main \
-  --icon icono.png
-```
+- `artifacts/linux/app-image/`
+- `artifacts/linux/deb/`
 
-Instalación:
+### Windows (.exe)
 
-```bash
-sudo dpkg -i tcp-udp-simulator_*_amd64.deb
-```
-
----
-
-## Windows (EXE/MSI)
-
-### 1) Generar instalador EXE (usa `icono.ico`)
+En PowerShell:
 
 ```powershell
-jpackage `
-  --type exe `
-  --name TCP-UDP-Simulator `
-  --input target/dist `
-  --main-jar tcp-udp-simulator-java-1.0.0.jar `
-  --main-class com.example.simulator.Main `
-  --icon icono.ico `
-  --win-shortcut `
-  --win-menu
+.\scripts\package-windows.ps1
 ```
 
-También puedes usar `--type msi` si prefieres MSI.
+Salida:
+
+- `artifacts/windows/exe/`
+
+> Nota: el script usa `icono.ico` para Windows.
+
+## Subir paquetes a GitHub (Release)
+
+La forma más práctica para binarios de escritorio es **GitHub Releases** (no guardar `.deb/.exe` dentro del repo en git normal).
+
+### Opción con `gh` CLI
+
+1. Crea un tag:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+2. Publica release con artefactos:
+
+```bash
+gh release create v1.0.0 \
+  artifacts/linux/deb/*.deb \
+  artifacts/linux/app-image/** \
+  artifacts/windows/exe/*.exe \
+  --title "v1.0.0" \
+  --notes "Primera versión pública del simulador TCP/UDP"
+```
+
+### Opción manual (web)
+
+1. Ve a `GitHub -> Releases -> Draft a new release`
+2. Selecciona el tag.
+3. Arrastra los archivos de:
+   - `artifacts/linux/deb/`
+   - `artifacts/windows/exe/`
+   - (opcional) carpeta/zip de `app-image`
+4. Publica la release.
+
+## GitHub Packages (Maven package)
+
+Si también quieres publicar el JAR como paquete Maven en GitHub Packages:
+
+1. Configura `distributionManagement` en `pom.xml` apuntando a `https://maven.pkg.github.com/<OWNER>/<REPO>`
+2. Configura credenciales en `~/.m2/settings.xml` con un token de GitHub (`write:packages`)
+3. Publica con:
+
+```bash
+mvn deploy
+```
+
+Para instaladores de escritorio (`.deb`, `.exe`), sigue usando Releases.
 
 ## Solución de problemas rápida
 

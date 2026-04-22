@@ -1,0 +1,10 @@
+/target/
+/.m2/
+/TCP-UDP-Simulator/
+/tcp-udp-simulator_*.deb
+
+/artifacts/linux/app-image/
+/artifacts/linux/deb/
+/artifacts/windows/exe/
+
+*.log

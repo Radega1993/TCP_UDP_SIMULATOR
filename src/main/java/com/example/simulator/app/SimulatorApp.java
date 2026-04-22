@@ -57,6 +57,15 @@ public class SimulatorApp extends Application implements SimulationListener {
     private Spinner<Integer> heightSpinner;
     private Spinner<Integer> fragmentSizeSpinner;
     private ComboBox<String> windowPresetSelector;
+    private HBox reviewControlsBox;
+    private Button reviewStepBackButton;
+    private Button reviewStepForwardButton;
+    private Button reviewFirstButton;
+    private Button reviewLastButton;
+    private Label stepIndicatorLabel;
+    private final List<UiSnapshot> uiSnapshots = new ArrayList<>();
+    private int currentSnapshotIndex = -1;
+    private boolean restoringSnapshot = false;
     private final Map<String, PacketNode> packetNodes = new HashMap<>();
     private final Map<String, double[]> packetTravel = new HashMap<>();
     private final Map<String, Integer> packetLane = new HashMap<>();
@@ -94,6 +103,7 @@ public class SimulatorApp extends Application implements SimulationListener {
         stage.setTitle("Simulador gráfico TCP y UDP - JavaFX");
         stage.setScene(scene);
         loadAppIcon(stage);
+        stage.setMaximized(true);
         stage.show();
 
         engine.reset();
@@ -241,26 +251,42 @@ public class SimulatorApp extends Application implements SimulationListener {
         Button resetButton = new Button("Reiniciar");
         Button applySizeButton = new Button("Aplicar tamaño");
         Button presetSizeButton = new Button("Usar preset");
+        reviewFirstButton = new Button("|<");
+        reviewStepBackButton = new Button("Paso <-");
+        reviewStepForwardButton = new Button("Paso ->");
+        reviewLastButton = new Button(">|");
+        stepIndicatorLabel = new Label("Paso: 0/0");
+        stepIndicatorLabel.setStyle("-fx-text-fill: #334155; -fx-font-weight: bold;");
 
         runButton.setStyle("-fx-background-color: #2563eb; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
         resetButton.setStyle("-fx-background-color: #e2e8f0; -fx-text-fill: #0f172a; -fx-font-weight: bold; -fx-background-radius: 10;");
         applySizeButton.setStyle("-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
         presetSizeButton.setStyle("-fx-background-color: #38bdf8; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
+        reviewFirstButton.setStyle("-fx-background-color: #4338ca; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
+        reviewStepBackButton.setStyle("-fx-background-color: #6366f1; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
+        reviewStepForwardButton.setStyle("-fx-background-color: #4f46e5; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
+        reviewLastButton.setStyle("-fx-background-color: #3730a3; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
         runButton.setPrefHeight(38);
         resetButton.setPrefHeight(38);
         applySizeButton.setPrefHeight(38);
         presetSizeButton.setPrefHeight(38);
+        reviewFirstButton.setPrefHeight(38);
+        reviewStepBackButton.setPrefHeight(38);
+        reviewStepForwardButton.setPrefHeight(38);
+        reviewLastButton.setPrefHeight(38);
 
         runButton.setOnAction(event -> {
             String inputMessage = normalizeMessage(messageField.getText());
             scenarioStartRequested = true;
             pendingMessage = inputMessage;
             pendingProtocol = protocolSelector.getValue();
+            engine.setStepMode(false);
             engine.setProtocolType(protocolSelector.getValue());
             engine.setPacketLossRate(lossSlider.getValue() / 100.0);
             engine.setSpeedFactor(speedSlider.getValue());
             engine.setFragmentSize(fragmentSizeSpinner.getValue());
             engine.runScenario(inputMessage);
+            statusLabel.setText("Simulación en vivo. Al terminar se habilita la revisión por pasos.");
         });
         resetButton.setOnAction(event -> {
             scenarioStartRequested = false;
@@ -268,6 +294,10 @@ public class SimulatorApp extends Application implements SimulationListener {
         });
         applySizeButton.setOnAction(event -> applyWindowSize());
         presetSizeButton.setOnAction(event -> applyWindowPreset());
+        reviewFirstButton.setOnAction(event -> goToFirstStep());
+        reviewStepBackButton.setOnAction(event -> goToPreviousStep());
+        reviewStepForwardButton.setOnAction(event -> goToNextStep());
+        reviewLastButton.setOnAction(event -> goToLastStep());
 
         GridPane grid = new GridPane();
         grid.setHgap(10);
@@ -291,8 +321,12 @@ public class SimulatorApp extends Application implements SimulationListener {
 
         HBox buttons = new HBox(10, runButton, resetButton, applySizeButton, presetSizeButton);
         buttons.setAlignment(Pos.CENTER_LEFT);
+        reviewControlsBox = new HBox(10, new Label("Revisión:"), reviewFirstButton, reviewStepBackButton, reviewStepForwardButton, reviewLastButton, stepIndicatorLabel);
+        reviewControlsBox.setAlignment(Pos.CENTER_LEFT);
+        reviewControlsBox.setVisible(false);
+        reviewControlsBox.setManaged(false);
 
-        VBox cardContent = new VBox(12, grid, buttons);
+        VBox cardContent = new VBox(12, grid, buttons, reviewControlsBox);
         return card("Controles", cardContent);
     }
 
@@ -419,9 +453,214 @@ public class SimulatorApp extends Application implements SimulationListener {
         }
     }
 
+    private void goToPreviousStep() {
+        if (uiSnapshots.isEmpty() || currentSnapshotIndex <= 0) {
+            return;
+        }
+        restoreSnapshot(currentSnapshotIndex - 1);
+    }
+
+    private void goToNextStep() {
+        if (!uiSnapshots.isEmpty() && currentSnapshotIndex < uiSnapshots.size() - 1) {
+            restoreSnapshot(currentSnapshotIndex + 1);
+        }
+    }
+
+    private void goToFirstStep() {
+        if (uiSnapshots.isEmpty()) {
+            return;
+        }
+        restoreSnapshot(0);
+    }
+
+    private void goToLastStep() {
+        if (uiSnapshots.isEmpty()) {
+            return;
+        }
+        restoreSnapshot(uiSnapshots.size() - 1);
+    }
+
+    private void updateStepIndicator() {
+        if (stepIndicatorLabel == null) {
+            return;
+        }
+        int current = uiSnapshots.isEmpty() ? 0 : currentSnapshotIndex + 1;
+        int total = uiSnapshots.size();
+        stepIndicatorLabel.setText("Paso: " + current + "/" + total);
+        if (reviewStepBackButton != null) {
+            reviewStepBackButton.setDisable(current <= 1);
+        }
+        if (reviewFirstButton != null) {
+            reviewFirstButton.setDisable(current <= 1);
+        }
+        if (reviewStepForwardButton != null) {
+            reviewStepForwardButton.setDisable(total == 0 || current >= total);
+        }
+        if (reviewLastButton != null) {
+            reviewLastButton.setDisable(total == 0 || current >= total);
+        }
+    }
+
+    private void recordSnapshot() {
+        if (restoringSnapshot) {
+            return;
+        }
+        if (reviewControlsBox == null) {
+            return;
+        }
+        UiSnapshot snapshot = captureSnapshot();
+        if (currentSnapshotIndex >= 0 && currentSnapshotIndex < uiSnapshots.size() - 1) {
+            uiSnapshots.subList(currentSnapshotIndex + 1, uiSnapshots.size()).clear();
+        }
+        uiSnapshots.add(snapshot);
+        currentSnapshotIndex = uiSnapshots.size() - 1;
+        updateStepIndicator();
+    }
+
+    private UiSnapshot captureSnapshot() {
+        List<PacketVisualSnapshot> activePackets = new ArrayList<>();
+        for (Map.Entry<String, PacketNode> entry : packetNodes.entrySet()) {
+            PacketNode node = entry.getValue();
+            if (node == null) {
+                continue;
+            }
+            Packet packet = node.getPacket();
+            activePackets.add(new PacketVisualSnapshot(
+                    copyPacket(packet),
+                    node.getLayoutX(),
+                    node.getLayoutY(),
+                    node.getTranslateX(),
+                    node.getTranslateY()
+            ));
+        }
+        return new UiSnapshot(
+                clientStateLabel.getText(),
+                serverStateLabel.getText(),
+                statusLabel.getText(),
+                logArea.getText(),
+                packetDetailsArea.getText(),
+                clientDataArea.getText(),
+                serverDataArea.getText(),
+                captureSideList(clientPacketList),
+                captureSideList(serverPacketList),
+                activePackets
+        );
+    }
+
+    private List<SideEntrySnapshot> captureSideList(VBox box) {
+        List<SideEntrySnapshot> entries = new ArrayList<>();
+        if (box == null) {
+            return entries;
+        }
+        for (Node node : box.getChildren()) {
+            if (node instanceof Label label) {
+                entries.add(SideEntrySnapshot.separator(label.getText()));
+            } else if (node instanceof PacketNode packetNode) {
+                entries.add(SideEntrySnapshot.packet(copyPacket(packetNode.getPacket())));
+            }
+        }
+        return entries;
+    }
+
+    private void restoreSnapshot(int targetIndex) {
+        if (targetIndex < 0 || targetIndex >= uiSnapshots.size()) {
+            return;
+        }
+        UiSnapshot snapshot = uiSnapshots.get(targetIndex);
+        restoringSnapshot = true;
+        try {
+            clientStateLabel.setText(snapshot.clientState);
+            serverStateLabel.setText(snapshot.serverState);
+            statusLabel.setText(snapshot.status);
+            logArea.setText(snapshot.logText);
+            packetDetailsArea.setText(snapshot.packetDetailsText);
+            clientDataArea.setText(snapshot.clientDataText);
+            serverDataArea.setText(snapshot.serverDataText);
+
+            restoreSideList(clientPacketList, snapshot.clientEntries);
+            restoreSideList(serverPacketList, snapshot.serverEntries);
+            restoreNetworkPackets(snapshot.activePackets);
+            currentSnapshotIndex = targetIndex;
+            updateStepIndicator();
+        } finally {
+            restoringSnapshot = false;
+        }
+    }
+
+    private void restoreSideList(VBox targetBox, List<SideEntrySnapshot> entries) {
+        if (targetBox == null) {
+            return;
+        }
+        targetBox.getChildren().clear();
+        for (SideEntrySnapshot entry : entries) {
+            if (entry.separatorText != null) {
+                Label separator = new Label(entry.separatorText);
+                separator.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #475569;");
+                separator.setMaxWidth(Double.MAX_VALUE);
+                separator.setAlignment(Pos.CENTER);
+                separator.setPadding(new Insets(4, 0, 2, 0));
+                targetBox.getChildren().add(separator);
+                continue;
+            }
+            if (entry.packet != null) {
+                PacketNode archived = new PacketNode(entry.packet);
+                archived.setScaleX(0.85);
+                archived.setScaleY(0.85);
+                archived.setOnMouseClicked(event -> showPacketDetails(entry.packet));
+                if (entry.packet.getStatus() == PacketStatus.DELIVERED) {
+                    archived.markDelivered();
+                } else if (entry.packet.getStatus() == PacketStatus.LOST) {
+                    archived.markLost();
+                }
+                targetBox.getChildren().add(archived);
+            }
+        }
+    }
+
+    private void restoreNetworkPackets(List<PacketVisualSnapshot> activePackets) {
+        networkPane.getChildren().removeIf(node -> node instanceof PacketNode);
+        packetNodes.clear();
+        packetTravel.clear();
+        packetLane.clear();
+        clearLaneState();
+        for (PacketVisualSnapshot visual : activePackets) {
+            Packet packet = visual.packet;
+            PacketNode node = new PacketNode(packet);
+            node.setLayoutX(visual.layoutX);
+            node.setLayoutY(visual.layoutY);
+            node.setTranslateX(visual.translateX);
+            node.setTranslateY(visual.translateY);
+            node.setOnMouseClicked(event -> showPacketDetails(packet));
+            if (packet.getStatus() == PacketStatus.DELIVERED) {
+                node.markDelivered();
+            } else if (packet.getStatus() == PacketStatus.LOST) {
+                node.markLost();
+            }
+            networkPane.getChildren().add(node);
+            packetNodes.put(packet.getId(), node);
+        }
+    }
+
+    private Packet copyPacket(Packet packet) {
+        return new Packet(
+                packet.getId(),
+                packet.getProtocolType(),
+                packet.getFrom(),
+                packet.getTo(),
+                packet.getKind(),
+                packet.getSeq(),
+                packet.getAck(),
+                packet.getPayload(),
+                packet.getStatus(),
+                packet.isRetransmission()
+        );
+    }
+
     @Override
     public void onLog(String message) {
-        Platform.runLater(() -> logArea.appendText(formatLog(message) + "\n"));
+        Platform.runLater(() -> {
+            logArea.appendText(formatLog(message) + "\n");
+        });
     }
 
     @Override
@@ -516,12 +755,39 @@ public class SimulatorApp extends Application implements SimulationListener {
 
     @Override
     public void onMessageDelivered(String message) {
-        Platform.runLater(() -> statusLabel.setText(message));
+        Platform.runLater(() -> {
+            statusLabel.setText(message);
+        });
+    }
+
+    @Override
+    public void onScenarioCompleted() {
+        Platform.runLater(() -> {
+            recordSnapshot();
+            if (reviewControlsBox != null) {
+                reviewControlsBox.setManaged(true);
+                reviewControlsBox.setVisible(true);
+            }
+            if (!uiSnapshots.isEmpty()) {
+                currentSnapshotIndex = uiSnapshots.size() - 1;
+            }
+            updateStepIndicator();
+            statusLabel.setText("Simulación terminada. Usa los controles de revisión por pasos.");
+        });
     }
 
     @Override
     public void onReset() {
         Platform.runLater(() -> {
+            if (!restoringSnapshot) {
+                uiSnapshots.clear();
+                currentSnapshotIndex = -1;
+                updateStepIndicator();
+                if (reviewControlsBox != null) {
+                    reviewControlsBox.setVisible(false);
+                    reviewControlsBox.setManaged(false);
+                }
+            }
             networkPane.getChildren().removeIf(node -> node instanceof PacketNode);
             packetNodes.clear();
             packetTravel.clear();
@@ -573,6 +839,7 @@ public class SimulatorApp extends Application implements SimulationListener {
                     serverPacketList.getChildren().clear();
                 }
             }
+            recordSnapshot();
         });
     }
 
@@ -829,5 +1096,67 @@ public class SimulatorApp extends Application implements SimulationListener {
             releaseLane(packet);
         });
         cleanupWait.play();
+    }
+
+    private static class UiSnapshot {
+        private final String clientState;
+        private final String serverState;
+        private final String status;
+        private final String logText;
+        private final String packetDetailsText;
+        private final String clientDataText;
+        private final String serverDataText;
+        private final List<SideEntrySnapshot> clientEntries;
+        private final List<SideEntrySnapshot> serverEntries;
+        private final List<PacketVisualSnapshot> activePackets;
+
+        private UiSnapshot(String clientState, String serverState, String status, String logText, String packetDetailsText,
+                           String clientDataText, String serverDataText, List<SideEntrySnapshot> clientEntries,
+                           List<SideEntrySnapshot> serverEntries, List<PacketVisualSnapshot> activePackets) {
+            this.clientState = clientState;
+            this.serverState = serverState;
+            this.status = status;
+            this.logText = logText;
+            this.packetDetailsText = packetDetailsText;
+            this.clientDataText = clientDataText;
+            this.serverDataText = serverDataText;
+            this.clientEntries = clientEntries;
+            this.serverEntries = serverEntries;
+            this.activePackets = activePackets;
+        }
+    }
+
+    private static class SideEntrySnapshot {
+        private final String separatorText;
+        private final Packet packet;
+
+        private SideEntrySnapshot(String separatorText, Packet packet) {
+            this.separatorText = separatorText;
+            this.packet = packet;
+        }
+
+        private static SideEntrySnapshot separator(String text) {
+            return new SideEntrySnapshot(text, null);
+        }
+
+        private static SideEntrySnapshot packet(Packet packet) {
+            return new SideEntrySnapshot(null, packet);
+        }
+    }
+
+    private static class PacketVisualSnapshot {
+        private final Packet packet;
+        private final double layoutX;
+        private final double layoutY;
+        private final double translateX;
+        private final double translateY;
+
+        private PacketVisualSnapshot(Packet packet, double layoutX, double layoutY, double translateX, double translateY) {
+            this.packet = packet;
+            this.layoutX = layoutX;
+            this.layoutY = layoutY;
+            this.translateX = translateX;
+            this.translateY = translateY;
+        }
     }
 }

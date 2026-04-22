@@ -9,5 +9,8 @@ com/example/simulator/model/Endpoint.class
 com/example/simulator/engine/SimulationEngine.class
 com/example/simulator/model/TcpState.class
 com/example/simulator/Main.class
+com/example/simulator/app/SimulatorApp$UiSnapshot.class
 com/example/simulator/model/Packet.class
 com/example/simulator/model/ProtocolType.class
+com/example/simulator/app/SimulatorApp$PacketVisualSnapshot.class
+com/example/simulator/app/SimulatorApp$SideEntrySnapshot.class

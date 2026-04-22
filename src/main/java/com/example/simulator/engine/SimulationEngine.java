@@ -7,6 +7,8 @@ import javafx.application.Platform;
 import javafx.util.Duration;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,6 +20,8 @@ public class SimulationEngine {
     private double speedFactor = 1.0;
     private int tcpSegmentSize = 8;
     private int udpDatagramSize = 3;
+    private boolean stepMode = false;
+    private final Deque<Runnable> pendingStepActions = new ArrayDeque<>();
     private TcpState clientState = TcpState.CLOSED;
     private TcpState serverState = TcpState.CLOSED;
     private int nextSeq = 1;
@@ -44,9 +48,33 @@ public class SimulationEngine {
         this.udpDatagramSize = safe;
     }
 
+    public void setStepMode(boolean stepMode) {
+        this.stepMode = stepMode;
+        if (!stepMode) {
+            pendingStepActions.clear();
+        }
+    }
+
+    public void stepForward() {
+        Runnable next = pendingStepActions.pollFirst();
+        if (next == null) {
+            return;
+        }
+        Platform.runLater(next);
+    }
+
+    public int getPendingStepCount() {
+        return pendingStepActions.size();
+    }
+
+    public boolean isStepMode() {
+        return stepMode;
+    }
+
     public void reset() {
         runningTimelines.forEach(Timeline::stop);
         runningTimelines.clear();
+        pendingStepActions.clear();
         nextSeq = 1;
         clientState = TcpState.CLOSED;
         serverState = TcpState.CLOSED;
@@ -153,7 +181,10 @@ public class SimulationEngine {
                 });
             });
         }
-        schedule(chunks.length * 700L + 900L, () -> listener.onLog("[UDP] Fin de simulación: no hay ACK ni retransmisión."));
+        schedule(chunks.length * 700L + 900L, () -> {
+            listener.onLog("[UDP] Fin de simulación: no hay ACK ni retransmisión.");
+            listener.onScenarioCompleted();
+        });
     }
 
     private void startTcpClose(String fullMessage) {
@@ -189,6 +220,7 @@ public class SimulationEngine {
                         listener.onTcpStateChanged(Endpoint.SERVER, serverState);
                         listener.onLog("[TCP] Conexión cerrada correctamente.");
                         listener.onMessageDelivered("TCP entregó: " + fullMessage + " y cerró la conexión.");
+                        listener.onScenarioCompleted();
                     });
                 });
             });
@@ -226,6 +258,10 @@ public class SimulationEngine {
     }
 
     private void schedule(long millis, Runnable action) {
+        if (stepMode) {
+            pendingStepActions.addLast(action);
+            return;
+        }
         double adjustedMillis = Math.max(120, millis / speedFactor);
         Timeline timeline = new Timeline(new KeyFrame(Duration.millis(adjustedMillis), event -> Platform.runLater(action)));
         timeline.setCycleCount(1);
