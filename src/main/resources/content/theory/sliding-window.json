@@ -1,0 +1,11 @@
+{
+  "id": "sliding-window",
+  "title": "Ventana deslizante",
+  "summary": "La ventana deslizante permite enviar varios segmentos antes de recibir confirmación de todos ellos. Esto mejora el rendimiento de TCP.",
+  "bullets": [
+    "La ventana fija cuántos bytes pueden estar en vuelo al mismo tiempo.",
+    "Cuando llega un ACK acumulativo, la ventana avanza y libera espacio para nuevos segmentos.",
+    "Si la ventana es pequeña, el emisor debe esperar más veces antes de seguir enviando."
+  ],
+  "scenarios": ["*", "protocol-tcp"]
+}

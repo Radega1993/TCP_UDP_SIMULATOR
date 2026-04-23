@@ -1,0 +1,11 @@
+{
+  "id": "cumulative-ack",
+  "title": "ACK acumulativo",
+  "summary": "Un ACK acumulativo confirma la recepción correcta de todos los bytes anteriores hasta el número indicado.",
+  "bullets": [
+    "ACK no confirma solo un paquete aislado: confirma el siguiente byte esperado.",
+    "Si falta un segmento intermedio, el ACK no avanza aunque lleguen bytes posteriores.",
+    "Esto permite a TCP detectar huecos y mantener el flujo en orden."
+  ],
+  "scenarios": ["*", "protocol-tcp"]
+}

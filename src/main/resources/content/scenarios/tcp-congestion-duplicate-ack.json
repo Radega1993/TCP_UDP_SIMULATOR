@@ -1,0 +1,17 @@
+{
+  "id": "tcp-congestion-duplicate-ack",
+  "title": "TCP congestión: duplicate ACK",
+  "protocol": "TCP",
+  "message": "ABCDEFGHIJKLMNOP",
+  "fragmentSize": 2,
+  "packetLossRate": 0.0,
+  "baseLatencyMillis": 850,
+  "jitterMillis": 0,
+  "duplicationRate": 0.0,
+  "reorderingRate": 0.0,
+  "bandwidthPacketsPerSecond": 0,
+  "tcpWindowSizeBytes": 16,
+  "tcpReceiverBufferBytes": 16,
+  "forcedLossIndexes": [2],
+  "educationalTopics": ["tcp", "congestion", "duplicate-ack", "fast-retransmit"]
+}

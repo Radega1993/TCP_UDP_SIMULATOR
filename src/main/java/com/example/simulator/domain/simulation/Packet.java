@@ -16,9 +16,15 @@ public class Packet {
     private final String payload;
     private PacketStatus status;
     private final boolean retransmission;
+    private final int windowSize;
 
     public Packet(String id, ProtocolType protocolType, Endpoint from, Endpoint to, PacketKind kind,
                   int seq, int ack, String payload, PacketStatus status, boolean retransmission) {
+        this(id, protocolType, from, to, kind, seq, ack, payload, status, retransmission, 0);
+    }
+
+    public Packet(String id, ProtocolType protocolType, Endpoint from, Endpoint to, PacketKind kind,
+                  int seq, int ack, String payload, PacketStatus status, boolean retransmission, int windowSize) {
         this.id = id;
         this.protocolType = protocolType;
         this.from = from;
@@ -29,6 +35,7 @@ public class Packet {
         this.payload = payload;
         this.status = status;
         this.retransmission = retransmission;
+        this.windowSize = Math.max(0, windowSize);
     }
 
     public String getId() {
@@ -75,11 +82,15 @@ public class Packet {
         return retransmission;
     }
 
+    public int getWindowSize() {
+        return windowSize;
+    }
+
     public String label() {
         String base = switch (kind) {
             case SYN -> "SYN";
             case SYN_ACK -> "SYN-ACK";
-            case ACK -> "ACK=" + ack;
+            case ACK -> "ACK=" + ack + (windowSize > 0 ? " WIN=" + windowSize : "");
             case DATA -> "DATA SEQ=" + seq;
             case FIN -> "FIN";
             case UDP_DATAGRAM -> "UDP";

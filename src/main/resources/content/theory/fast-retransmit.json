@@ -1,0 +1,11 @@
+{
+  "id": "fast-retransmit",
+  "title": "Fast Retransmit",
+  "summary": "Si el emisor recibe varios ACK duplicados, puede inferir que un segmento se perdió y retransmitirlo sin esperar al timeout completo.",
+  "bullets": [
+    "Los duplicate ACK indican que el receptor sigue esperando un byte anterior.",
+    "Si se acumulan varios, TCP sospecha una pérdida intermedia.",
+    "Esto permite reaccionar más rápido que esperando el temporizador."
+  ],
+  "scenarios": ["*", "protocol-tcp"]
+}

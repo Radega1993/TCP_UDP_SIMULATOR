@@ -1,0 +1,11 @@
+{
+  "id": "tcp-vs-udp-comparison",
+  "title": "Comparación TCP vs UDP",
+  "summary": "TCP prioriza fiabilidad, orden y control. UDP prioriza simplicidad, baja sobrecarga y rapidez. TCP es adecuado cuando perder datos es inaceptable. UDP es útil cuando importa más la rapidez que la recuperación de errores.",
+  "bullets": [
+    "TCP establece conexión previa; UDP no.",
+    "TCP usa ACK y retransmisión; UDP no ofrece esas garantías de forma nativa.",
+    "TCP mantiene mejor el orden y la entrega completa; UDP reduce sobrecarga y latencia de arranque."
+  ],
+  "scenarios": ["comparison", "compare"]
+}

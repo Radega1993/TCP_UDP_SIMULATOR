@@ -1,0 +1,11 @@
+{
+  "id": "duplication",
+  "title": "Duplicación",
+  "summary": "En algunas redes un mismo paquete puede aparecer duplicado. Los protocolos y aplicaciones deben ser capaces de tratar esta situación.",
+  "bullets": [
+    "La duplicación puede hacer que el receptor vea dos copias del mismo datagrama o segmento.",
+    "TCP puede identificar mejor la repetición gracias a números de secuencia y ACK.",
+    "En UDP la aplicación es quien debe decidir cómo tratar copias repetidas."
+  ],
+  "scenarios": ["*"]
+}

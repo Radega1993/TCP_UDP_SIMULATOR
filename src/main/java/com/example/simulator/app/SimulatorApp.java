@@ -1,24 +1,38 @@
 package com.example.simulator.app;
 
+import com.example.simulator.application.dto.ComparisonCommand;
+import com.example.simulator.application.dto.ProtocolComparisonResult;
 import com.example.simulator.application.dto.SimulationCommand;
 import com.example.simulator.domain.network.Endpoint;
+import com.example.simulator.domain.network.NetworkConditions;
 import com.example.simulator.domain.protocol.PacketKind;
 import com.example.simulator.domain.protocol.PacketStatus;
 import com.example.simulator.domain.protocol.ProtocolType;
 import com.example.simulator.domain.protocol.tcp.TcpState;
 import com.example.simulator.domain.scenario.Scenario;
+import com.example.simulator.domain.simulation.CongestionSnapshot;
+import com.example.simulator.domain.simulation.CwndHistoryPoint;
+import com.example.simulator.domain.simulation.FlowControlSnapshot;
 import com.example.simulator.domain.simulation.Packet;
 import com.example.simulator.presentation.playback.JavaFxSimulationPlayer;
 import com.example.simulator.presentation.playback.SimulationPlaybackListener;
+import com.example.simulator.presentation.viewmodel.ComparisonViewModel;
+import com.example.simulator.presentation.viewmodel.SimulationMode;
 import com.example.simulator.presentation.viewmodel.SimulationViewModel;
+import com.example.simulator.ui.BottomControlBar;
+import com.example.simulator.ui.ComparisonModeView;
+import com.example.simulator.ui.CongestionPanel;
 import com.example.simulator.ui.ControlPanel;
 import com.example.simulator.ui.DashboardCard;
 import com.example.simulator.ui.EventLogPanel;
 import com.example.simulator.ui.MailboxPanel;
 import com.example.simulator.ui.MessageSummaryPanel;
+import com.example.simulator.ui.ModeLaunchCard;
 import com.example.simulator.ui.NetworkCanvas;
 import com.example.simulator.ui.PacketNode;
 import com.example.simulator.ui.SimulatorHeader;
+import com.example.simulator.ui.SlidingWindowPanel;
+import com.example.simulator.ui.StyledButton;
 import com.example.simulator.ui.StatePanel;
 import com.example.simulator.ui.UiTheme;
 import javafx.animation.FadeTransition;
@@ -32,11 +46,11 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
-import javafx.scene.layout.*;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import javafx.stage.Modality;
 import javafx.util.Duration;
 
 import java.util.ArrayList;
@@ -49,33 +63,46 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javafx.scene.layout.*;
 
 
 public class SimulatorApp extends Application implements SimulationPlaybackListener {
     private Pane networkPane;
     private NetworkCanvas networkCanvas;
     private TextArea logArea;
-    private TextArea packetDetailsArea;
     private TextArea clientDataArea;
     private TextArea serverDataArea;
-    private TextArea theoryArea;
     private VBox clientPacketList;
     private VBox serverPacketList;
     private Label clientStateLabel;
     private Label serverStateLabel;
     private Label statusLabel;
     private SimulationViewModel viewModel;
+    private ComparisonViewModel comparisonViewModel;
     private JavaFxSimulationPlayer player;
+    private ComparisonModeView comparisonModeView;
+    private BottomControlBar bottomControlBar;
+    private Stage configurationStage;
+    private VBox workspaceContent;
+    private StackPane appContentStack;
+    private Node homeView;
+    private Node simpleModeView;
+    private StackPane modeContentStack;
+    private ComboBox<SimulationMode> modeSelector;
     private ComboBox<ProtocolType> protocolSelector;
     private ComboBox<Scenario> scenarioSelector;
     private Slider lossSlider;
+    private Slider latencySlider;
+    private Slider jitterSlider;
+    private Slider duplicationSlider;
+    private Slider reorderingSlider;
     private Slider speedSlider;
     private TextField messageField;
     private Stage primaryStage;
-    private Spinner<Integer> widthSpinner;
-    private Spinner<Integer> heightSpinner;
     private Spinner<Integer> fragmentSizeSpinner;
-    private ComboBox<String> windowPresetSelector;
+    private Spinner<Integer> bandwidthSpinner;
+    private Spinner<Integer> tcpWindowSizeSpinner;
+    private Spinner<Integer> tcpReceiverBufferSpinner;
     private HBox reviewControlsBox;
     private Button reviewStepBackButton;
     private Button reviewStepForwardButton;
@@ -86,6 +113,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     private Label stepIndicatorLabel;
     private List<Scenario> scenarios = List.of();
     private ControlPanel controlPanel;
+    private FlowPane simulationRow;
+    private FlowPane mainContentRow;
     private final List<UiSnapshot> uiSnapshots = new ArrayList<>();
     private int currentSnapshotIndex = -1;
     private boolean restoringSnapshot = false;
@@ -107,12 +136,28 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     private boolean scenarioStartRequested = false;
     private String pendingMessage = "";
     private ProtocolType pendingProtocol = ProtocolType.TCP;
+    private String lastPacketDetailsText = "Haz clic en un paquete para abrir su detalle.";
+    private String currentTheoryText = "";
+    private SlidingWindowPanel slidingWindowPanel;
+    private CongestionPanel congestionPanel;
+    private FlowControlSnapshot latestFlowControlSnapshot;
+    private CongestionSnapshot latestCongestionSnapshot;
+    private final List<CwndHistoryPoint> congestionHistory = new ArrayList<>();
+    private WorkspaceScreen currentScreen = WorkspaceScreen.HOME;
+
+    private enum WorkspaceScreen {
+        HOME,
+        TCP,
+        UDP,
+        COMPARE
+    }
 
     @Override
     public void start(Stage stage) {
         primaryStage = stage;
         Bootstrap bootstrap = new Bootstrap();
         viewModel = bootstrap.createSimulationViewModel();
+        comparisonViewModel = bootstrap.createComparisonViewModel();
         player = new JavaFxSimulationPlayer(this);
         scenarios = viewModel.availableScenarios();
 
@@ -121,9 +166,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         root.setStyle(UiTheme.APP_BACKGROUND);
 
         root.setTop(buildHeader());
-        root.setCenter(buildCenter());
-        root.setRight(buildRightPanel());
-        root.setBottom(buildFooter());
+        root.setCenter(buildApplicationContent());
+        root.setBottom(buildBottomBar());
 
         Scene scene = new Scene(root, 1500, 860);
         stage.setTitle("Simulador gráfico TCP y UDP - JavaFX");
@@ -137,11 +181,290 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
 
     private VBox buildHeader() {
         VBox box = new VBox(new SimulatorHeader());
-        box.setPadding(new Insets(0, 0, 18, 0));
+        box.setPadding(new Insets(0, 0, 16, 0));
         return box;
     }
 
-    private VBox buildCenter() {
+    private Node buildApplicationContent() {
+        buildControls();
+        homeView = buildHomeView();
+        workspaceContent = buildWorkspaceContent();
+
+        appContentStack = new StackPane(homeView, workspaceContent);
+        showHomeScreen();
+
+        ScrollPane scrollPane = new ScrollPane(appContentStack);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
+        scrollPane.viewportBoundsProperty().addListener((obs, oldBounds, bounds) -> {
+            if (mainContentRow != null) {
+                mainContentRow.setPrefWrapLength(Math.max(900, bounds.getWidth() - 18));
+            }
+            if (simulationRow != null) {
+                simulationRow.setPrefWrapLength(Math.max(860, bounds.getWidth() - 450));
+            }
+        });
+        return scrollPane;
+    }
+
+    private Node buildBottomBar() {
+        bottomControlBar = new BottomControlBar();
+        bottomControlBar.getHomeButton().setOnAction(event -> showHomeScreen());
+        bottomControlBar.getTheoryButton().setOnAction(event -> openTheoryModal());
+        bottomControlBar.getRunButton().setOnAction(event -> startSimulation());
+        bottomControlBar.getResetButton().setOnAction(event -> resetActiveMode());
+        bottomControlBar.getPlayPauseButton().setOnAction(event -> togglePlaybackPause());
+        bottomControlBar.getStepButton().setOnAction(event -> {
+            if (isComparisonMode()) {
+                comparisonModeView.stepForward();
+            } else {
+                player.stepForward();
+            }
+            updatePlaybackButtons();
+        });
+        bottomControlBar.getReviewFirstButton().setOnAction(event -> goToFirstStep());
+        bottomControlBar.getReviewStepBackButton().setOnAction(event -> goToPreviousStep());
+        bottomControlBar.getReviewStepForwardButton().setOnAction(event -> goToNextStep());
+        bottomControlBar.getReviewLastButton().setOnAction(event -> goToLastStep());
+
+        playPauseButton = bottomControlBar.getPlayPauseButton();
+        liveStepButton = bottomControlBar.getStepButton();
+        reviewFirstButton = bottomControlBar.getReviewFirstButton();
+        reviewStepBackButton = bottomControlBar.getReviewStepBackButton();
+        reviewStepForwardButton = bottomControlBar.getReviewStepForwardButton();
+        reviewLastButton = bottomControlBar.getReviewLastButton();
+        stepIndicatorLabel = bottomControlBar.getStepIndicatorLabel();
+        reviewControlsBox = bottomControlBar.getReviewBox();
+        bottomControlBar.setVisible(false);
+        bottomControlBar.setManaged(false);
+        updatePlaybackButtons();
+        return bottomControlBar;
+    }
+
+    private Node buildHomeView() {
+        DashboardCard intro = new DashboardCard("INICIO", "Elige una experiencia de simulación",
+                "Accede directamente al modo TCP, al modo UDP o a la comparación paralela entre ambos.");
+        intro.setStyle(UiTheme.HERO_CARD);
+
+        ModeLaunchCard tcpCard = new ModeLaunchCard("PROTOCOLO", "TCP",
+                "Explora handshake, ACK, retransmisión y cierre con una vista centrada en fiabilidad.",
+                "Ideal para explicar conexión previa, confirmaciones y recuperación de pérdidas.");
+        tcpCard.setOnMouseClicked(event -> openSimpleWorkspace(ProtocolType.TCP));
+
+        ModeLaunchCard udpCard = new ModeLaunchCard("PROTOCOLO", "UDP",
+                "Observa datagramas, pérdidas y simplicidad de envío sin conexión ni ACK.",
+                "Ideal para explicar baja sobrecarga, rapidez y ausencia de recuperación nativa.");
+        udpCard.setOnMouseClicked(event -> openSimpleWorkspace(ProtocolType.UDP));
+
+        ModeLaunchCard comparisonCard = new ModeLaunchCard("COMPARACIÓN", "TCP vs UDP",
+                "Lanza ambos protocolos en paralelo con la misma red y el mismo mensaje.",
+                "Ideal para ver en una sola demo la diferencia entre fiabilidad y simplicidad.");
+        comparisonCard.setOnMouseClicked(event -> openComparisonWorkspace());
+
+        FlowPane cards = new FlowPane(22, 22, tcpCard, udpCard, comparisonCard);
+        cards.setAlignment(Pos.TOP_LEFT);
+        cards.setPrefWrapLength(1300);
+
+        VBox home = new VBox(22, intro, cards);
+        home.setPadding(new Insets(0, 0, 18, 0));
+        return home;
+    }
+
+    private VBox buildWorkspaceContent() {
+        simpleModeView = buildSimpleModeView();
+        comparisonModeView = new ComparisonModeView(details -> openTextModal(
+                "Detalle del paquete",
+                "Lectura puntual del paquete seleccionado.",
+                details,
+                true
+        ));
+        comparisonModeView.setVisible(false);
+        comparisonModeView.setManaged(false);
+
+        modeContentStack = new StackPane(simpleModeView, comparisonModeView);
+        DashboardCard workspaceIntro = new DashboardCard("ESPACIO DE TRABAJO", "Simulación activa",
+                "La configuración se abre en modal y la barra inferior concentra la ejecución y navegación.");
+        workspaceIntro.setStyle(UiTheme.HERO_CARD);
+        workspaceIntro.setContent(buildWorkspaceIntroBar());
+
+        VBox content = new VBox(18, workspaceIntro, modeContentStack);
+        content.setPadding(new Insets(0, 0, 12, 0));
+        return content;
+    }
+
+    private Node buildWorkspaceIntroBar() {
+        StyledButton configButton = new StyledButton("Configurar simulación", StyledButton.Kind.SOFT);
+        configButton.setOnAction(event -> openConfigurationModal());
+
+        FlowPane compactLegend = new FlowPane(12, 8,
+                compactLegendChip(Color.web("#93c5fd"), "TCP SYN"),
+                compactLegendChip(Color.web("#60a5fa"), "TCP SYN-ACK"),
+                compactLegendChip(Color.web("#86efac"), "TCP ACK"),
+                compactLegendChip(Color.web("#7dd3fc"), "TCP DATA"),
+                compactLegendChip(Color.web("#c4b5fd"), "UDP"),
+                compactLegendChip(Color.web("#fecaca"), "Perdido"),
+                compactLegendChip(Color.web("#fed7aa"), "Retransmitido")
+        );
+        compactLegend.setAlignment(Pos.CENTER_RIGHT);
+        compactLegend.setPrefWrapLength(860);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox row = new HBox(16, configButton, spacer, compactLegend);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setPadding(new Insets(2, 0, 0, 0));
+        return row;
+    }
+
+    private HBox compactLegendChip(Color color, String text) {
+        Rectangle swatch = new Rectangle(12, 12);
+        swatch.setArcWidth(5);
+        swatch.setArcHeight(5);
+        swatch.setFill(color);
+        swatch.setStroke(Color.web("#5c7087"));
+
+        Label label = new Label(text);
+        label.setStyle("-fx-font-size: 11px; -fx-text-fill: #304559;");
+
+        HBox chip = new HBox(6, swatch, label);
+        chip.setAlignment(Pos.CENTER_LEFT);
+        chip.setPadding(new Insets(4, 8, 4, 8));
+        chip.setStyle("-fx-background-color: rgba(248,251,254,0.9);"
+                + "-fx-background-radius: 999; -fx-border-radius: 999; -fx-border-color: #dbe4ee;");
+        return chip;
+    }
+
+    private void showHomeScreen() {
+        currentScreen = WorkspaceScreen.HOME;
+        if (homeView != null) {
+            homeView.setVisible(true);
+            homeView.setManaged(true);
+        }
+        if (workspaceContent != null) {
+            workspaceContent.setVisible(false);
+            workspaceContent.setManaged(false);
+        }
+        if (bottomControlBar != null) {
+            bottomControlBar.setVisible(false);
+            bottomControlBar.setManaged(false);
+        }
+        if (comparisonModeView != null) {
+            comparisonModeView.stop();
+        }
+        if (player != null) {
+            player.stop();
+        }
+    }
+
+    private void openSimpleWorkspace(ProtocolType protocolType) {
+        currentScreen = protocolType == ProtocolType.TCP ? WorkspaceScreen.TCP : WorkspaceScreen.UDP;
+        modeSelector.setValue(SimulationMode.SIMPLE);
+        protocolSelector.setDisable(false);
+        protocolSelector.setValue(protocolType);
+        switchSimulationMode(SimulationMode.SIMPLE);
+        refreshTheoryPanel();
+        revealWorkspace();
+        onReset();
+    }
+
+    private void openComparisonWorkspace() {
+        currentScreen = WorkspaceScreen.COMPARE;
+        modeSelector.setValue(SimulationMode.COMPARE);
+        switchSimulationMode(SimulationMode.COMPARE);
+        refreshTheoryPanel();
+        revealWorkspace();
+    }
+
+    private void revealWorkspace() {
+        if (homeView != null) {
+            homeView.setVisible(false);
+            homeView.setManaged(false);
+        }
+        if (workspaceContent != null) {
+            workspaceContent.setVisible(true);
+            workspaceContent.setManaged(true);
+        }
+        if (bottomControlBar != null) {
+            bottomControlBar.setVisible(true);
+            bottomControlBar.setManaged(true);
+        }
+    }
+
+    private void openConfigurationModal() {
+        if (configurationStage == null) {
+            configurationStage = new Stage();
+            configurationStage.initOwner(primaryStage);
+            configurationStage.initModality(Modality.NONE);
+            configurationStage.setTitle("Configuración de simulación");
+
+            DashboardCard modalShell = new DashboardCard("CONFIGURACIÓN", "Parámetros de la simulación",
+                    "Ajusta escenario, red y visualización sin ocupar espacio fijo en la pantalla.");
+            modalShell.setStyle(UiTheme.HERO_CARD);
+            modalShell.setContent(controlPanel);
+
+            ScrollPane scrollPane = new ScrollPane(modalShell);
+            scrollPane.setFitToWidth(true);
+            scrollPane.setFitToHeight(true);
+            scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+            scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+            scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
+
+            Label titleLabel = new Label("Configurar simulación");
+            titleLabel.setStyle("-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #102033;");
+
+            Label subtitleLabel = new Label("Revisa escenario, red, ventana TCP y visualización en un único panel.");
+            subtitleLabel.setWrapText(true);
+            subtitleLabel.setStyle(UiTheme.SUBTITLE);
+
+            StyledButton closeButton = new StyledButton("Cerrar", StyledButton.Kind.SOFT);
+            closeButton.setOnAction(event -> configurationStage.close());
+
+            Region spacer = new Region();
+            HBox.setHgrow(spacer, Priority.ALWAYS);
+
+            HBox footer = new HBox(12, spacer, closeButton);
+            footer.setAlignment(Pos.CENTER_RIGHT);
+            footer.setPadding(new Insets(14, 0, 0, 0));
+
+            BorderPane content = new BorderPane();
+            content.setTop(new VBox(8, titleLabel, subtitleLabel));
+            content.setCenter(scrollPane);
+            content.setBottom(footer);
+            content.setPadding(new Insets(20));
+            content.setStyle(UiTheme.APP_BACKGROUND);
+
+            Scene scene = new Scene(content, 1180, 900);
+            configurationStage.setScene(scene);
+            configurationStage.setMinWidth(1080);
+            configurationStage.setMinHeight(820);
+        }
+        if (currentScreen == WorkspaceScreen.TCP || currentScreen == WorkspaceScreen.UDP) {
+            protocolSelector.setDisable(true);
+            protocolSelector.setValue(currentScreen == WorkspaceScreen.TCP ? ProtocolType.TCP : ProtocolType.UDP);
+        } else {
+            protocolSelector.setDisable(true);
+        }
+        configurationStage.show();
+        configurationStage.toFront();
+    }
+
+    private Node buildSimpleModeView() {
+        VBox centerColumn = buildSimpleCenter();
+        Node leftPanel = buildLeftPanel();
+        Node rightPanel = buildRightPanel();
+        HBox row = new HBox(18, leftPanel, centerColumn, rightPanel);
+        row.setAlignment(Pos.TOP_LEFT);
+        HBox.setHgrow(centerColumn, Priority.ALWAYS);
+        centerColumn.setMaxWidth(Double.MAX_VALUE);
+        mainContentRow = new FlowPane();
+        mainContentRow.getChildren().setAll(row);
+        return mainContentRow;
+    }
+
+    private VBox buildSimpleCenter() {
         networkCanvas = new NetworkCanvas();
         networkPane = networkCanvas;
 
@@ -149,128 +472,112 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         MailboxPanel serverHistoryCard = new MailboxPanel("Buzón servidor", "Llegadas al receptor");
         clientPacketList = clientHistoryCard.getItemsBox();
         serverPacketList = serverHistoryCard.getItemsBox();
-        clientHistoryCard.setPrefWidth(236);
-        clientHistoryCard.setMinWidth(220);
-        serverHistoryCard.setPrefWidth(236);
-        serverHistoryCard.setMinWidth(220);
+        clientHistoryCard.setPrefWidth(176);
+        clientHistoryCard.setMinWidth(164);
+        serverHistoryCard.setPrefWidth(176);
+        serverHistoryCard.setMinWidth(164);
 
-        HBox centerRow = new HBox(14, clientHistoryCard, networkCanvas, serverHistoryCard);
+        HBox simulationLane = new HBox(14, clientHistoryCard, networkCanvas, serverHistoryCard);
+        simulationLane.setAlignment(Pos.TOP_LEFT);
         HBox.setHgrow(networkCanvas, Priority.ALWAYS);
-        VBox.setVgrow(centerRow, Priority.ALWAYS);
+        networkCanvas.setMaxWidth(Double.MAX_VALUE);
 
-        VBox box = new VBox(14, centerRow, buildControls());
+        simulationRow = new FlowPane();
+        simulationRow.getChildren().setAll(simulationLane);
+
+        DashboardCard simulationCard = new DashboardCard("SIMULACIÓN", "Escenario de red", "La zona principal de observación para seguir el tránsito de paquetes.");
+        simulationCard.setStyle(UiTheme.HERO_CARD);
+        simulationCard.setContent(simulationRow);
+        simulationCard.setMaxWidth(Double.MAX_VALUE);
+
+        VBox box = new VBox(14, simulationCard);
+        box.setFillWidth(true);
+        box.setMaxWidth(Double.MAX_VALUE);
+        box.setPrefWidth(1100);
         return box;
     }
 
-    private Node buildRightPanel() {
-        VBox panel = new VBox(16);
-        panel.setPadding(new Insets(0, 0, 0, 14));
-        panel.setPrefWidth(390);
-        panel.setMinWidth(360);
+    private Node buildLeftPanel() {
+        VBox panel = new VBox(14);
+        panel.setPadding(new Insets(0, 0, 0, 2));
+        panel.setPrefWidth(290);
+        panel.setMinWidth(270);
 
         StatePanel statePanel = new StatePanel();
         clientStateLabel = statePanel.getClientStateLabel();
         serverStateLabel = statePanel.getServerStateLabel();
         statusLabel = statePanel.getStatusLabel();
 
-        packetDetailsArea = new TextArea();
-        packetDetailsArea.setEditable(false);
-        packetDetailsArea.setWrapText(true);
-        packetDetailsArea.setPrefRowCount(6);
-        packetDetailsArea.setText("Selecciona un paquete para ver su detalle.");
-        packetDetailsArea.setStyle(UiTheme.MUTED_TEXT_SURFACE);
-        VBox detailsCard = card("Detalle del paquete", "Inspección rápida del paquete seleccionado.", wrapInset(packetDetailsArea));
+        slidingWindowPanel = new SlidingWindowPanel();
+        congestionPanel = new CongestionPanel();
 
-        VBox legend = new VBox(6,
-                legendRow(Color.web("#93c5fd"), "Azul claro: TCP SYN"),
-                legendRow(Color.web("#60a5fa"), "Azul medio: TCP SYN-ACK"),
-                legendRow(Color.web("#86efac"), "Verde: TCP ACK"),
-                legendRow(Color.web("#7dd3fc"), "Celeste: TCP DATA"),
-                legendRow(Color.web("#c4b5fd"), "Morado: UDP"),
-                legendRow(Color.web("#fecaca"), "Rojo: Perdido"),
-                legendRow(Color.web("#fed7aa"), "Naranja: Retransmitido")
-        );
-        legend.setPadding(new Insets(6));
-        VBox legendCard = card("Leyenda visual", "Código cromático de los paquetes y eventos principales.", wrapInset(legend));
+        panel.getChildren().addAll(statePanel, slidingWindowPanel, congestionPanel);
+        return panel;
+    }
 
-        theoryArea = new TextArea();
-        theoryArea.setEditable(false);
-        theoryArea.setWrapText(true);
-        theoryArea.setPrefRowCount(11);
-        theoryArea.setStyle(UiTheme.TEXT_SURFACE);
-        theoryArea.setText(viewModel.helpTextForContext("*", protocolSelector != null ? protocolSelector.getValue() : ProtocolType.TCP));
-        VBox theoryCard = card("Teoría y ayuda", "Apoyo docente contextual para interpretar lo que ves en la simulación.", wrapInset(theoryArea));
-        VBox.setVgrow(theoryArea, Priority.ALWAYS);
+    private Node buildRightPanel() {
+        VBox panel = new VBox(14);
+        panel.setPadding(new Insets(0, 0, 0, 2));
+        panel.setPrefWidth(350);
+        panel.setMinWidth(320);
 
         EventLogPanel eventLogPanel = new EventLogPanel();
         logArea = eventLogPanel.getLogArea();
 
-        panel.getChildren().addAll(statePanel, detailsCard, legendCard, theoryCard, eventLogPanel);
-        VBox.setVgrow(eventLogPanel, Priority.ALWAYS);
+        Label hint = new Label("Consejo didáctico: compara el texto enviado y el recibido para ver el efecto de la red.");
+        hint.setWrapText(true);
+        hint.setStyle("-fx-text-fill: #617487; -fx-font-size: 12px;");
+
+        MessageSummaryPanel clientCard = new MessageSummaryPanel("Cliente", "Mensaje enviado");
+        MessageSummaryPanel serverCard = new MessageSummaryPanel("Servidor", "Mensaje recibido");
+        clientDataArea = clientCard.getTextArea();
+        serverDataArea = serverCard.getTextArea();
+
+        clientCard.setPrefWidth(150);
+        serverCard.setPrefWidth(150);
+
+        HBox messagePanels = new HBox(10, clientCard, serverCard);
+        HBox.setHgrow(clientCard, Priority.ALWAYS);
+        HBox.setHgrow(serverCard, Priority.ALWAYS);
+        clientCard.setMaxWidth(Double.MAX_VALUE);
+        serverCard.setMaxWidth(Double.MAX_VALUE);
+
+        DashboardCard messageCard = new DashboardCard("RESULTADO", "Mensajes y reconstrucción", "Vista paralela del mensaje en origen y destino.");
+        messageCard.setContent(new VBox(10, messagePanels, hint));
+        messageCard.setMaxWidth(Double.MAX_VALUE);
+
+        panel.getChildren().addAll(eventLogPanel, messageCard);
         return panel;
     }
 
-    private VBox buildFooter() {
-        Label hint = new Label("Consejo didáctico: ejecuta la misma palabra en TCP y UDP con una pérdida del 30-40% para comparar la fiabilidad.");
-        hint.setStyle("-fx-text-fill: #617487; -fx-font-size: 12px;");
-        MessageSummaryPanel clientCard = new MessageSummaryPanel("Cliente: mensaje enviado", "Salida didáctica del emisor");
-        MessageSummaryPanel serverCard = new MessageSummaryPanel("Servidor: mensaje recibido", "Resultado visible en destino");
-        clientDataArea = clientCard.getTextArea();
-        serverDataArea = serverCard.getTextArea();
-        HBox messages = new HBox(16, clientCard, serverCard);
-        HBox.setHgrow(clientCard, Priority.ALWAYS);
-        HBox.setHgrow(serverCard, Priority.ALWAYS);
-        VBox box = new VBox(10, messages, hint);
-        box.setPadding(new Insets(14, 0, 0, 0));
-        return box;
-    }
-
-    private VBox buildControls() {
+    private void buildControls() {
         controlPanel = new ControlPanel(scenarios);
+        controlPanel.hideActionsSection();
+        modeSelector = controlPanel.getModeSelector();
         protocolSelector = controlPanel.getProtocolSelector();
         scenarioSelector = controlPanel.getScenarioSelector();
         messageField = controlPanel.getMessageField();
         lossSlider = controlPanel.getLossSlider();
+        latencySlider = controlPanel.getLatencySlider();
+        jitterSlider = controlPanel.getJitterSlider();
+        duplicationSlider = controlPanel.getDuplicationSlider();
+        reorderingSlider = controlPanel.getReorderingSlider();
         speedSlider = controlPanel.getSpeedSlider();
         fragmentSizeSpinner = controlPanel.getFragmentSizeSpinner();
-        widthSpinner = controlPanel.getWidthSpinner();
-        heightSpinner = controlPanel.getHeightSpinner();
-        windowPresetSelector = controlPanel.getWindowPresetSelector();
-        playPauseButton = controlPanel.getPlayPauseButton();
-        liveStepButton = controlPanel.getLiveStepButton();
-        reviewFirstButton = controlPanel.getReviewFirstButton();
-        reviewStepBackButton = controlPanel.getReviewStepBackButton();
-        reviewStepForwardButton = controlPanel.getReviewStepForwardButton();
-        reviewLastButton = controlPanel.getReviewLastButton();
-        stepIndicatorLabel = controlPanel.getStepIndicatorLabel();
-        reviewControlsBox = controlPanel.getReviewControlsBox();
+        bandwidthSpinner = controlPanel.getBandwidthSpinner();
+        tcpWindowSizeSpinner = controlPanel.getTcpWindowSizeSpinner();
+        tcpReceiverBufferSpinner = controlPanel.getTcpReceiverBufferSpinner();
 
         scenarioSelector.setOnAction(event -> applyScenarioSelection(scenarioSelector.getValue()));
-
-        controlPanel.getRunButton().setOnAction(event -> startSimulation());
-        controlPanel.getResetButton().setOnAction(event -> {
-            scenarioStartRequested = false;
-            player.stop();
-            viewModel.reset();
-            onReset();
-        });
-        playPauseButton.setOnAction(event -> togglePlaybackPause());
-        liveStepButton.setOnAction(event -> {
-            player.stepForward();
-            updatePlaybackButtons();
-        });
-        controlPanel.getApplySizeButton().setOnAction(event -> applyWindowSize());
-        controlPanel.getPresetSizeButton().setOnAction(event -> applyWindowPreset());
-        reviewFirstButton.setOnAction(event -> goToFirstStep());
-        reviewStepBackButton.setOnAction(event -> goToPreviousStep());
-        reviewStepForwardButton.setOnAction(event -> goToNextStep());
-        reviewLastButton.setOnAction(event -> goToLastStep());
         protocolSelector.setOnAction(event -> refreshTheoryPanel());
         updatePlaybackButtons();
-        return controlPanel;
     }
 
     private void startSimulation() {
+        if (isComparisonMode()) {
+            startComparison();
+            return;
+        }
         Scenario selectedScenario = scenarioSelector.getValue();
         String inputMessage = normalizeMessage(messageField.getText());
         scenarioStartRequested = true;
@@ -282,7 +589,14 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                         protocolSelector.getValue(),
                         inputMessage,
                         fragmentSizeSpinner.getValue(),
-                        lossSlider.getValue() / 100.0
+                        lossSlider.getValue() / 100.0,
+                        Math.round(latencySlider.getValue()),
+                        Math.round(jitterSlider.getValue()),
+                        duplicationSlider.getValue() / 100.0,
+                        reorderingSlider.getValue() / 100.0,
+                        bandwidthSpinner.getValue(),
+                        tcpWindowSizeSpinner.getValue(),
+                        tcpReceiverBufferSpinner.getValue()
                 ));
 
         if (result.getEvents().isEmpty()) {
@@ -303,7 +617,44 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         refreshTheoryPanel();
     }
 
+    private void startComparison() {
+        Scenario selectedScenario = scenarioSelector.getValue();
+        ComparisonCommand command = selectedScenario != null
+                ? ComparisonCommand.fromScenario(selectedScenario)
+                : new ComparisonCommand(
+                        normalizeMessage(messageField.getText()),
+                        fragmentSizeSpinner.getValue(),
+                        new NetworkConditions(
+                                lossSlider.getValue() / 100.0,
+                                Math.round(latencySlider.getValue()),
+                                Math.round(jitterSlider.getValue()),
+                                duplicationSlider.getValue() / 100.0,
+                                reorderingSlider.getValue() / 100.0,
+                                bandwidthSpinner.getValue(),
+                                Set.of()
+                        ),
+                        tcpWindowSizeSpinner.getValue(),
+                        tcpReceiverBufferSpinner.getValue()
+                );
+        ProtocolComparisonResult result = comparisonViewModel.startComparison(command);
+        comparisonModeView.start(result.getTcpResult(), result.getUdpResult(), result.getSummary(), speedSlider.getValue());
+        updatePlaybackButtons();
+    }
+
     private void togglePlaybackPause() {
+        if (isComparisonMode()) {
+            if (!comparisonModeView.hasRemainingEvents()) {
+                updatePlaybackButtons();
+                return;
+            }
+            if (comparisonModeView.isPaused()) {
+                comparisonModeView.play();
+            } else {
+                comparisonModeView.pause();
+            }
+            updatePlaybackButtons();
+            return;
+        }
         if (!player.hasRemainingEvents()) {
             updatePlaybackButtons();
             return;
@@ -320,11 +671,57 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         if (playPauseButton == null || liveStepButton == null) {
             return;
         }
-        boolean hasRemaining = player != null && player.hasRemainingEvents();
-        boolean paused = player == null || player.isPaused();
+        boolean hasRemaining = isComparisonMode()
+                ? comparisonModeView != null && comparisonModeView.hasRemainingEvents()
+                : player != null && player.hasRemainingEvents();
+        boolean paused = isComparisonMode()
+                ? comparisonModeView == null || comparisonModeView.isPaused()
+                : player == null || player.isPaused();
         playPauseButton.setDisable(!hasRemaining);
         liveStepButton.setDisable(!hasRemaining);
         playPauseButton.setText(paused ? "Reanudar" : "Pausar");
+    }
+
+    private void switchSimulationMode(SimulationMode mode) {
+        boolean compare = mode == SimulationMode.COMPARE;
+        if (simpleModeView != null) {
+            simpleModeView.setVisible(!compare);
+            simpleModeView.setManaged(!compare);
+        }
+        if (comparisonModeView != null) {
+            comparisonModeView.setVisible(compare);
+            comparisonModeView.setManaged(compare);
+        }
+        if (protocolSelector != null) {
+            protocolSelector.setDisable(compare || currentScreen == WorkspaceScreen.TCP || currentScreen == WorkspaceScreen.UDP);
+        }
+        if (reviewControlsBox != null) {
+            boolean showReview = !compare && !uiSnapshots.isEmpty();
+            reviewControlsBox.setManaged(showReview);
+            reviewControlsBox.setVisible(showReview);
+        }
+        if (bottomControlBar != null) {
+            bottomControlBar.getRunButton().setText(compare ? "Iniciar comparación" : "Iniciar");
+        }
+        updatePlaybackButtons();
+    }
+
+    private void resetActiveMode() {
+        scenarioStartRequested = false;
+        if (isComparisonMode()) {
+            if (comparisonModeView != null) {
+                comparisonModeView.stop();
+            }
+            updatePlaybackButtons();
+            return;
+        }
+        player.stop();
+        viewModel.reset();
+        onReset();
+    }
+
+    private boolean isComparisonMode() {
+        return modeSelector != null && modeSelector.getValue() == SimulationMode.COMPARE;
     }
 
     private void applyScenarioSelection(Scenario scenario) {
@@ -335,17 +732,31 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         protocolSelector.setValue(scenario.getProtocol());
         messageField.setText(scenario.getMessage());
         fragmentSizeSpinner.getValueFactory().setValue(scenario.getFragmentSize());
+        tcpWindowSizeSpinner.getValueFactory().setValue(scenario.getTcpWindowSizeBytes());
+        tcpReceiverBufferSpinner.getValueFactory().setValue(scenario.getTcpReceiverBufferBytes());
         lossSlider.setValue(scenario.getNetworkConditions().getPacketLossRate() * 100.0);
+        latencySlider.setValue(scenario.getNetworkConditions().getBaseLatencyMillis());
+        jitterSlider.setValue(scenario.getNetworkConditions().getJitterMillis());
+        duplicationSlider.setValue(scenario.getNetworkConditions().getDuplicationRate() * 100.0);
+        reorderingSlider.setValue(scenario.getNetworkConditions().getReorderingRate() * 100.0);
+        bandwidthSpinner.getValueFactory().setValue(scenario.getNetworkConditions().getBandwidthPacketsPerSecond());
         refreshTheoryPanel();
     }
 
     private void refreshTheoryPanel() {
-        if (theoryArea == null || protocolSelector == null) {
+        if (protocolSelector == null || viewModel == null) {
             return;
         }
-        Scenario selectedScenario = scenarioSelector != null ? scenarioSelector.getValue() : null;
-        String scenarioId = selectedScenario == null ? "*" : selectedScenario.getId();
-        theoryArea.setText(viewModel.helpTextForContext(scenarioId, protocolSelector.getValue()));
+        if (currentScreen == WorkspaceScreen.COMPARE || isComparisonMode()) {
+            currentTheoryText = viewModel.detailedTheoryForComparison();
+            return;
+        }
+        ProtocolType protocol = protocolSelector.getValue();
+        if (protocol == null) {
+            currentTheoryText = viewModel.helpTextForContext("*", null);
+            return;
+        }
+        currentTheoryText = viewModel.detailedTheoryForProtocol(protocol);
     }
 
     private VBox card(String title, Node content) {
@@ -384,7 +795,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
 
     private VBox wrapInset(Node content) {
         VBox wrapper = new VBox(content);
-        wrapper.setPadding(new Insets(6));
+        wrapper.setPadding(new Insets(8));
         wrapper.setStyle(UiTheme.PANEL_INSET_TINT);
         VBox.setVgrow(content, Priority.ALWAYS);
         return wrapper;
@@ -410,34 +821,6 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             stage.getIcons().add(new Image(fileStream));
         } catch (Exception ignored) {
             // If icon cannot be loaded, app still starts normally.
-        }
-    }
-
-    private void applyWindowSize() {
-        if (primaryStage == null) {
-            return;
-        }
-        int width = widthSpinner.getValue();
-        int height = heightSpinner.getValue();
-        primaryStage.setWidth(width);
-        primaryStage.setHeight(height);
-        statusLabel.setText("Tamaño de ventana aplicado: " + width + "x" + height);
-    }
-
-    private void applyWindowPreset() {
-        String preset = windowPresetSelector.getValue();
-        if (preset == null || !preset.contains("x")) {
-            return;
-        }
-        String[] parts = preset.split("x");
-        try {
-            int width = Integer.parseInt(parts[0]);
-            int height = Integer.parseInt(parts[1]);
-            widthSpinner.getValueFactory().setValue(width);
-            heightSpinner.getValueFactory().setValue(height);
-            applyWindowSize();
-        } catch (NumberFormatException ignored) {
-            statusLabel.setText("Preset inválido: " + preset);
         }
     }
 
@@ -526,9 +909,12 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 serverStateLabel.getText(),
                 statusLabel.getText(),
                 logArea.getText(),
-                packetDetailsArea.getText(),
+                lastPacketDetailsText,
                 clientDataArea.getText(),
                 serverDataArea.getText(),
+                latestFlowControlSnapshot,
+                latestCongestionSnapshot,
+                List.copyOf(congestionHistory),
                 captureSideList(clientPacketList),
                 captureSideList(serverPacketList),
                 activePackets
@@ -561,9 +947,19 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             serverStateLabel.setText(snapshot.serverState);
             statusLabel.setText(snapshot.status);
             logArea.setText(snapshot.logText);
-            packetDetailsArea.setText(snapshot.packetDetailsText);
+            lastPacketDetailsText = snapshot.packetDetailsText;
             clientDataArea.setText(snapshot.clientDataText);
             serverDataArea.setText(snapshot.serverDataText);
+            latestFlowControlSnapshot = snapshot.flowControlSnapshot;
+            if (slidingWindowPanel != null) {
+                slidingWindowPanel.update(snapshot.flowControlSnapshot);
+            }
+            latestCongestionSnapshot = snapshot.congestionSnapshot;
+            congestionHistory.clear();
+            congestionHistory.addAll(snapshot.congestionHistory);
+            if (congestionPanel != null) {
+                congestionPanel.restore(snapshot.congestionSnapshot, snapshot.congestionHistory);
+            }
 
             restoreSideList(clientPacketList, snapshot.clientEntries);
             restoreSideList(serverPacketList, snapshot.serverEntries);
@@ -594,7 +990,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 PacketNode archived = new PacketNode(entry.packet);
                 archived.setScaleX(0.85);
                 archived.setScaleY(0.85);
-                archived.setOnMouseClicked(event -> showPacketDetails(entry.packet));
+                archived.setOnMouseClicked(event -> openPacketDetails(entry.packet));
                 if (entry.packet.getStatus() == PacketStatus.DELIVERED) {
                     archived.markDelivered();
                 } else if (entry.packet.getStatus() == PacketStatus.LOST) {
@@ -618,7 +1014,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             node.setLayoutY(visual.layoutY);
             node.setTranslateX(visual.translateX);
             node.setTranslateY(visual.translateY);
-            node.setOnMouseClicked(event -> showPacketDetails(packet));
+            node.setOnMouseClicked(event -> openPacketDetails(packet));
             if (packet.getStatus() == PacketStatus.DELIVERED) {
                 node.markDelivered();
             } else if (packet.getStatus() == PacketStatus.LOST) {
@@ -640,7 +1036,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 packet.getAck(),
                 packet.getPayload(),
                 packet.getStatus(),
-                packet.isRetransmission()
+                packet.isRetransmission(),
+                packet.getWindowSize()
         );
     }
 
@@ -661,7 +1058,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             double y = laneToY(packet, lane);
             node.setLayoutX(startX);
             node.setLayoutY(y);
-            node.setOnMouseClicked(event -> showPacketDetails(packet));
+            node.setOnMouseClicked(event -> openPacketDetails(packet));
             networkPane.getChildren().add(node);
             packetNodes.put(packet.getId(), node);
             packetTravel.put(packet.getId(), new double[]{startX, endX});
@@ -675,7 +1072,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 node.markRetransmitted();
             }
             statusLabel.setText("En tránsito: " + packet.label());
-            showPacketDetails(packet);
+            rememberPacketDetails(packet);
             updateMessagePanelsOnCreated(packet);
         });
     }
@@ -701,7 +1098,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 schedulePacketCleanup(packet);
             }
             statusLabel.setText("Entregado: " + packet.label());
-            showPacketDetails(packet);
+            rememberPacketDetails(packet);
             updateMessagePanelsOnDelivered(packet);
             archivePacketCard(packet, packet.getTo());
         });
@@ -724,7 +1121,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 schedulePacketCleanup(packet);
             }
             statusLabel.setText("Perdido: " + packet.label());
-            showPacketDetails(packet);
+            rememberPacketDetails(packet);
             updateMessagePanelsOnLost(packet);
             archivePacketCard(packet, packet.getFrom());
         });
@@ -745,6 +1142,32 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     public void onMessageDelivered(String message) {
         runOnFxThread(() -> {
             statusLabel.setText(message);
+        });
+    }
+
+    @Override
+    public void onFlowControlUpdated(FlowControlSnapshot snapshot) {
+        runOnFxThread(() -> {
+            latestFlowControlSnapshot = snapshot;
+            if (slidingWindowPanel != null) {
+                slidingWindowPanel.update(snapshot);
+            }
+        });
+    }
+
+    @Override
+    public void onCongestionUpdated(CongestionSnapshot snapshot) {
+        runOnFxThread(() -> {
+            latestCongestionSnapshot = snapshot;
+            if (snapshot != null && snapshot.getHistoryPoint() != null) {
+                if (congestionHistory.isEmpty()
+                        || congestionHistory.get(congestionHistory.size() - 1).getStep() != snapshot.getHistoryPoint().getStep()) {
+                    congestionHistory.add(snapshot.getHistoryPoint());
+                }
+            }
+            if (congestionPanel != null) {
+                congestionPanel.update(snapshot);
+            }
         });
     }
 
@@ -789,10 +1212,19 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             tcpSentSegments.clear();
             tcpReceivedSegments.clear();
             tcpDeliveredMessage = "";
+            latestFlowControlSnapshot = null;
+            latestCongestionSnapshot = null;
+            congestionHistory.clear();
             logArea.clear();
-            packetDetailsArea.setText("Selecciona un paquete para ver su detalle.");
+            lastPacketDetailsText = "Haz clic en un paquete para abrir su detalle.";
             clientDataArea.clear();
             serverDataArea.clear();
+            if (slidingWindowPanel != null) {
+                slidingWindowPanel.reset();
+            }
+            if (congestionPanel != null) {
+                congestionPanel.reset();
+            }
             statusLabel.setText("Listo para iniciar");
             refreshTheoryPanel();
             updatePlaybackButtons();
@@ -809,18 +1241,53 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                         "Mensaje a enviar:\n\"" + currentMessage + "\""
                 );
                 if (currentProtocol == ProtocolType.TCP) {
+                    if (slidingWindowPanel != null) {
+                        slidingWindowPanel.update(new FlowControlSnapshot(
+                                tcpWindowSizeSpinner.getValue(),
+                                0,
+                                0,
+                                0,
+                                currentMessage.length(),
+                                tcpReceiverBufferSpinner.getValue(),
+                                0,
+                                tcpReceiverBufferSpinner.getValue()
+                        ));
+                    }
+                    if (congestionPanel != null) {
+                        congestionPanel.reset();
+                    }
                     serverDataArea.setText(
-                            "Protocolo: TCP\n" +
-                            "Estado conexión: iniciando 3-way handshake\n" +
+                        "Protocolo: TCP\n" +
+                        "Estado conexión: iniciando 3-way handshake\n" +
                             "Mensaje recibido:\n\"\""
                     );
                 } else {
+                    if (slidingWindowPanel != null) {
+                        slidingWindowPanel.showUnavailable();
+                    }
+                    if (congestionPanel != null) {
+                        congestionPanel.showUnavailable();
+                    }
                     serverDataArea.setText("Protocolo: UDP\nDatagramas recibidos: []\nDatagramas perdidos: []\nMensaje recibido:\n\"\"");
                 }
                 scenarioStartRequested = false;
             } else {
                 currentMessage = "";
                 currentProtocol = protocolSelector != null ? protocolSelector.getValue() : ProtocolType.TCP;
+                if (slidingWindowPanel != null) {
+                    if (currentProtocol == ProtocolType.TCP) {
+                        slidingWindowPanel.reset();
+                    } else {
+                        slidingWindowPanel.showUnavailable();
+                    }
+                }
+                if (congestionPanel != null) {
+                    if (currentProtocol == ProtocolType.TCP) {
+                        congestionPanel.reset();
+                    } else {
+                        congestionPanel.showUnavailable();
+                    }
+                }
                 clientDataArea.setText("Sin simulación activa.");
                 serverDataArea.setText("Sin simulación activa.");
                 if (clientPacketList != null) {
@@ -842,20 +1309,25 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         }
     }
 
-    private void showPacketDetails(Packet packet) {
+    private void rememberPacketDetails(Packet packet) {
         String payload = packet.getPayload() == null || packet.getPayload().isBlank() ? "-" : packet.getPayload();
         double elapsed = (System.currentTimeMillis() - scenarioStartMillis) / 1000.0;
-        packetDetailsArea.setText(
+        lastPacketDetailsText =
                 "Protocolo: " + packet.getProtocolType() + "\n" +
                 "Tipo: " + packet.getKind() + "\n" +
                 "Origen: " + packet.getFrom() + "\n" +
                 "Destino: " + packet.getTo() + "\n" +
                 "SEQ: " + packet.getSeq() + "\n" +
                 "ACK: " + packet.getAck() + "\n" +
+                "WIN: " + packet.getWindowSize() + "\n" +
                 "Payload: " + payload + "\n" +
                 "Estado: " + packet.getStatus() + "\n" +
-                String.format("Tiempo: %.1f s", elapsed)
-        );
+                String.format("Tiempo: %.1f s", elapsed);
+    }
+
+    private void openPacketDetails(Packet packet) {
+        rememberPacketDetails(packet);
+        openPacketDetailsModal();
     }
 
     private void updateMessagePanelsOnCreated(Packet packet) {
@@ -1033,7 +1505,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         PacketNode archived = new PacketNode(packet);
         archived.setScaleX(0.85);
         archived.setScaleY(0.85);
-        archived.setOnMouseClicked(event -> showPacketDetails(packet));
+        archived.setOnMouseClicked(event -> openPacketDetails(packet));
 
         if (packet.getStatus() == PacketStatus.DELIVERED) {
             archived.markDelivered();
@@ -1045,6 +1517,55 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         if (targetList != null) {
             targetList.getChildren().add(archived);
         }
+    }
+
+    private void openPacketDetailsModal() {
+        openTextModal("Detalle del paquete", "Lectura puntual del paquete seleccionado.", lastPacketDetailsText, true);
+    }
+
+    private void openTheoryModal() {
+        String subtitle = switch (currentScreen) {
+            case TCP -> "Guía docente completa para explicar TCP usando la simulación.";
+            case UDP -> "Guía docente completa para explicar UDP usando la simulación.";
+            case COMPARE -> "Guía docente para comparar TCP y UDP con la misma red y el mismo mensaje.";
+            default -> "Contexto docente asociado al modo de trabajo activo.";
+        };
+        openTextModal("Teoría", subtitle, currentTheoryText, false);
+    }
+
+    private void openTextModal(String title, String subtitle, String content, boolean monospaced) {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.NONE);
+        dialog.setTitle(title);
+        dialog.setResizable(true);
+
+        Label titleLabel = new Label(title);
+        titleLabel.setStyle("-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #102033;");
+
+        Label subtitleLabel = new Label(subtitle);
+        subtitleLabel.setWrapText(true);
+        subtitleLabel.setStyle(UiTheme.SUBTITLE);
+
+        TextArea body = new TextArea(content == null || content.isBlank() ? "No hay contenido disponible todavía." : content);
+        body.setEditable(false);
+        body.setWrapText(true);
+        body.setStyle((monospaced ? UiTheme.MUTED_TEXT_SURFACE : UiTheme.TEXT_SURFACE));
+        VBox.setVgrow(body, Priority.ALWAYS);
+
+        Button closeButton = new Button("Cerrar");
+        closeButton.setStyle(UiTheme.SOFT_BUTTON);
+        closeButton.setOnAction(event -> dialog.close());
+
+        VBox contentBox = new VBox(12, titleLabel, subtitleLabel, body, closeButton);
+        contentBox.setPadding(new Insets(22));
+        contentBox.setStyle(UiTheme.APP_BACKGROUND);
+        VBox.setVgrow(body, Priority.ALWAYS);
+
+        Scene modalScene = new Scene(contentBox, 820, 620);
+        dialog.setScene(modalScene);
+        dialog.setMinWidth(680);
+        dialog.setMinHeight(480);
+        dialog.show();
     }
 
     private int allocateLane(Packet packet) {
@@ -1105,12 +1626,17 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         private final String packetDetailsText;
         private final String clientDataText;
         private final String serverDataText;
+        private final FlowControlSnapshot flowControlSnapshot;
+        private final CongestionSnapshot congestionSnapshot;
+        private final List<CwndHistoryPoint> congestionHistory;
         private final List<SideEntrySnapshot> clientEntries;
         private final List<SideEntrySnapshot> serverEntries;
         private final List<PacketVisualSnapshot> activePackets;
 
         private UiSnapshot(String clientState, String serverState, String status, String logText, String packetDetailsText,
-                           String clientDataText, String serverDataText, List<SideEntrySnapshot> clientEntries,
+                           String clientDataText, String serverDataText, FlowControlSnapshot flowControlSnapshot,
+                           CongestionSnapshot congestionSnapshot, List<CwndHistoryPoint> congestionHistory,
+                           List<SideEntrySnapshot> clientEntries,
                            List<SideEntrySnapshot> serverEntries, List<PacketVisualSnapshot> activePackets) {
             this.clientState = clientState;
             this.serverState = serverState;
@@ -1119,6 +1645,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             this.packetDetailsText = packetDetailsText;
             this.clientDataText = clientDataText;
             this.serverDataText = serverDataText;
+            this.flowControlSnapshot = flowControlSnapshot;
+            this.congestionSnapshot = congestionSnapshot;
+            this.congestionHistory = congestionHistory;
             this.clientEntries = clientEntries;
             this.serverEntries = serverEntries;
             this.activePackets = activePackets;

@@ -5,6 +5,11 @@
   "message": "HOLAALUMNOS",
   "fragmentSize": 3,
   "packetLossRate": 0.2,
+  "baseLatencyMillis": 900,
+  "jitterMillis": 120,
+  "duplicationRate": 0.0,
+  "reorderingRate": 0.0,
+  "bandwidthPacketsPerSecond": 0,
   "forcedLossIndexes": [],
   "educationalTopics": ["udp", "datagramas", "perdida"]
 }

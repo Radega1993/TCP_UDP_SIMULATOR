@@ -1,0 +1,11 @@
+{
+  "id": "packet-loss",
+  "title": "Pérdida de paquetes",
+  "summary": "La pérdida de paquetes ocurre cuando algunos paquetes no llegan al destino. TCP intenta recuperarlos mediante retransmisión; UDP no.",
+  "bullets": [
+    "En TCP la pérdida suele disparar timeout y retransmisión.",
+    "En UDP el datagrama perdido desaparece y la aplicación debe tolerarlo.",
+    "Una misma tasa de pérdida provoca comportamientos muy distintos según el protocolo."
+  ],
+  "scenarios": ["*"]
+}

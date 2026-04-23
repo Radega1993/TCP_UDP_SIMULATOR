@@ -1,0 +1,11 @@
+{
+  "id": "latency",
+  "title": "Latencia",
+  "summary": "La latencia es el tiempo que tarda un paquete en ir desde el origen al destino.",
+  "bullets": [
+    "Una latencia alta hace que la respuesta visual y lógica tarde más en aparecer.",
+    "TCP y UDP sufren la latencia, pero TCP además arrastra confirmaciones y cierre.",
+    "En este simulador puedes modificarla sin cambiar el protocolo."
+  ],
+  "scenarios": ["*"]
+}

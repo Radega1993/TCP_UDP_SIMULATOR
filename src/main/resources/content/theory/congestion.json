@@ -1,0 +1,11 @@
+{
+  "id": "congestion",
+  "title": "Congestión",
+  "summary": "La congestión ocurre cuando la red no puede transportar todo el tráfico que recibe. TCP ajusta automáticamente su ritmo de envío para adaptarse.",
+  "bullets": [
+    "TCP no solo respeta la ventana del receptor: también limita su envío con la congestion window o cwnd.",
+    "Cuando la red parece estable, cwnd crece; cuando hay señales de pérdida, cwnd cae.",
+    "Así TCP intenta usar la red sin saturarla."
+  ],
+  "scenarios": ["*", "protocol-tcp"]
+}

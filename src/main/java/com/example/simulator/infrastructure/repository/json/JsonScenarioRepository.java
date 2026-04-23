@@ -43,6 +43,13 @@ public class JsonScenarioRepository implements ScenarioRepository {
         public String message;
         public int fragmentSize;
         public double packetLossRate;
+        public long baseLatencyMillis = 1200L;
+        public long jitterMillis;
+        public double duplicationRate;
+        public double reorderingRate;
+        public int bandwidthPacketsPerSecond;
+        public int tcpWindowSizeBytes = 24;
+        public int tcpReceiverBufferBytes = 24;
         public int[] forcedLossIndexes;
         public String[] educationalTopics;
 
@@ -53,8 +60,15 @@ public class JsonScenarioRepository implements ScenarioRepository {
                     ProtocolType.valueOf(protocol),
                     message,
                     fragmentSize,
+                    tcpWindowSizeBytes,
+                    tcpReceiverBufferBytes,
                     new NetworkConditions(
                             packetLossRate,
+                            baseLatencyMillis,
+                            jitterMillis,
+                            duplicationRate,
+                            reorderingRate,
+                            bandwidthPacketsPerSecond,
                             forcedLossIndexes == null ? java.util.Set.of() : Arrays.stream(forcedLossIndexes).boxed().collect(java.util.stream.Collectors.toSet())
                     ),
                     educationalTopics == null ? List.of() : List.of(educationalTopics)

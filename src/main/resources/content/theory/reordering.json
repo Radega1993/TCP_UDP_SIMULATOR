@@ -1,0 +1,11 @@
+{
+  "id": "reordering",
+  "title": "Reordenación",
+  "summary": "Los paquetes no siempre llegan en el mismo orden en el que fueron enviados. TCP puede reordenarlos; UDP no lo garantiza.",
+  "bullets": [
+    "La red puede alterar el orden por rutas distintas, colas o variaciones de retardo.",
+    "TCP usa secuencias para reconstruir el flujo correctamente.",
+    "UDP puede entregar paquetes fuera de orden si la aplicación no corrige ese efecto."
+  ],
+  "scenarios": ["*"]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "tcp-congestion-growth",
+  "title": "TCP congestión: crecimiento normal",
+  "protocol": "TCP",
+  "message": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  "fragmentSize": 2,
+  "packetLossRate": 0.0,
+  "baseLatencyMillis": 800,
+  "jitterMillis": 0,
+  "duplicationRate": 0.0,
+  "reorderingRate": 0.0,
+  "bandwidthPacketsPerSecond": 0,
+  "tcpWindowSizeBytes": 24,
+  "tcpReceiverBufferBytes": 24,
+  "forcedLossIndexes": [],
+  "educationalTopics": ["tcp", "congestion", "slow-start", "congestion-avoidance"]
+}

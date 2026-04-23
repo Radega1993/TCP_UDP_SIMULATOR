@@ -1,0 +1,11 @@
+{
+  "id": "congestion-avoidance",
+  "title": "Congestion Avoidance",
+  "summary": "Una vez alcanzado cierto umbral, TCP aumenta su ventana más lentamente para evitar saturar la red.",
+  "bullets": [
+    "El crecimiento deja de ser rápido y pasa a ser más gradual.",
+    "Esta fase intenta seguir mejorando rendimiento sin provocar congestión brusca.",
+    "En la gráfica se aprecia una pendiente más suave que en slow start."
+  ],
+  "scenarios": ["*", "protocol-tcp"]
+}

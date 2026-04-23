@@ -2,23 +2,30 @@ package com.example.simulator.ui;
 
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 
 public class StatePanel extends DashboardCard {
-    private final Label clientStateLabel = stateChip("Cliente: CLOSED");
-    private final Label serverStateLabel = stateChip("Servidor: CLOSED");
+    private final Label clientStateLabel = stateChip("Cliente", "CLOSED");
+    private final Label serverStateLabel = stateChip("Servidor", "CLOSED");
     private final Label statusLabel = new Label("Listo para iniciar");
 
     public StatePanel() {
-        super("Estados", "Resumen rápido del ciclo de la conexión.");
+        super("ESTADO", "Estados", "Lectura rápida del ciclo de conexión y del estado actual.");
+
+        GridPane chips = new GridPane();
+        chips.setHgap(10);
+        chips.setVgap(10);
+        chips.add(clientStateLabel, 0, 0);
+        chips.add(serverStateLabel, 1, 0);
 
         statusLabel.setWrapText(true);
-        statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #34475a; -fx-padding: 4 2 2 2;");
+        statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #34475a;");
 
-        VBox content = new VBox(10, clientStateLabel, serverStateLabel, statusLabel);
-        content.setPadding(new Insets(8));
-        content.setStyle(UiTheme.PANEL_INSET_TINT);
-        getContentBox().getChildren().add(content);
+        VBox statusSurface = new VBox(8, chips, statusLabel);
+        statusSurface.setPadding(new Insets(10));
+        statusSurface.setStyle(UiTheme.PANEL_INSET_TINT);
+        getContentBox().getChildren().add(statusSurface);
     }
 
     public Label getClientStateLabel() {
@@ -33,8 +40,8 @@ public class StatePanel extends DashboardCard {
         return statusLabel;
     }
 
-    private Label stateChip(String text) {
-        Label label = new Label(text);
+    private Label stateChip(String role, String state) {
+        Label label = new Label(role + ": " + state);
         label.setStyle(UiTheme.CHIP);
         label.setMaxWidth(Double.MAX_VALUE);
         return label;

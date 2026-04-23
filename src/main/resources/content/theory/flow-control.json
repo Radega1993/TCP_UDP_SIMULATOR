@@ -1,0 +1,11 @@
+{
+  "id": "flow-control",
+  "title": "Control de flujo",
+  "summary": "El control de flujo evita que el emisor envíe más datos de los que el receptor puede procesar o almacenar temporalmente.",
+  "bullets": [
+    "El receptor anuncia una ventana disponible basada en su buffer.",
+    "Si el buffer se reduce, el emisor se frena aunque todavía queden datos por enviar.",
+    "Así se evita saturar al receptor incluso cuando la red permite enviar rápido."
+  ],
+  "scenarios": ["*", "protocol-tcp"]
+}

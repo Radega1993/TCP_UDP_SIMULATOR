@@ -1,0 +1,17 @@
+{
+  "id": "tcp-congestion-timeout",
+  "title": "TCP congestión: pérdida por timeout",
+  "protocol": "TCP",
+  "message": "ABCDEFGHIJKL",
+  "fragmentSize": 2,
+  "packetLossRate": 0.0,
+  "baseLatencyMillis": 900,
+  "jitterMillis": 0,
+  "duplicationRate": 0.0,
+  "reorderingRate": 0.0,
+  "bandwidthPacketsPerSecond": 0,
+  "tcpWindowSizeBytes": 4,
+  "tcpReceiverBufferBytes": 4,
+  "forcedLossIndexes": [2],
+  "educationalTopics": ["tcp", "congestion", "timeout", "slow-start"]
+}

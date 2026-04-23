@@ -1,0 +1,11 @@
+{
+  "id": "slow-start",
+  "title": "Slow Start",
+  "summary": "Al comienzo, TCP incrementa rápidamente la ventana de congestión para descubrir la capacidad disponible de la red.",
+  "bullets": [
+    "cwnd empieza pequeña para no saturar la red al inicio.",
+    "Cada ACK nuevo hace crecer la ventana con rapidez.",
+    "Esta fase termina cuando se alcanza ssthresh o aparece una señal de congestión."
+  ],
+  "scenarios": ["*", "protocol-tcp"]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "tcp-congestion-recovery",
+  "title": "TCP congestión: caída y recuperación",
+  "protocol": "TCP",
+  "message": "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456",
+  "fragmentSize": 2,
+  "packetLossRate": 0.0,
+  "baseLatencyMillis": 900,
+  "jitterMillis": 120,
+  "duplicationRate": 0.0,
+  "reorderingRate": 0.0,
+  "bandwidthPacketsPerSecond": 0,
+  "tcpWindowSizeBytes": 16,
+  "tcpReceiverBufferBytes": 16,
+  "forcedLossIndexes": [2, 7],
+  "educationalTopics": ["tcp", "congestion", "fast-retransmit", "timeout", "recovery"]
+}

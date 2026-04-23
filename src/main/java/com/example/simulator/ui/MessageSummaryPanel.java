@@ -9,19 +9,19 @@ public class MessageSummaryPanel extends DashboardCard {
     private final TextArea textArea = new TextArea();
 
     public MessageSummaryPanel(String title, String subtitle) {
-        super(title, subtitle);
-
+        super("MENSAJE", title, subtitle);
         textArea.setEditable(false);
         textArea.setWrapText(true);
         textArea.setPrefRowCount(6);
-        textArea.setStyle(UiTheme.MONO + "-fx-control-inner-background: #f8fbfe; -fx-background-insets: 0; -fx-background-radius: 16;");
+        textArea.setStyle(UiTheme.MUTED_TEXT_SURFACE);
 
         VBox wrapper = new VBox(textArea);
-        wrapper.setPadding(new Insets(4));
+        wrapper.setPadding(new Insets(6));
         wrapper.setStyle(UiTheme.PANEL_INSET);
         VBox.setVgrow(textArea, Priority.ALWAYS);
 
         getContentBox().getChildren().add(wrapper);
+        setMaxWidth(Double.MAX_VALUE);
     }
 
     public TextArea getTextArea() {

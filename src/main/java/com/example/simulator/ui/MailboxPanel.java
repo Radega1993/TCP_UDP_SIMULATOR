@@ -11,20 +11,22 @@ public class MailboxPanel extends DashboardCard {
     private final ScrollPane scrollPane = new ScrollPane(itemsBox);
 
     public MailboxPanel(String title, String subtitle) {
-        super(title, subtitle);
+        super("BANDEJA", title, subtitle);
 
-        Label helper = new Label("Historial visual de paquetes entregados o perdidos.");
+        Label helper = new Label("Historial visual de paquetes y resultados observables.");
         helper.setStyle(UiTheme.SUBTITLE);
 
-        itemsBox.setPadding(new Insets(6));
+        itemsBox.setPadding(new Insets(8));
         itemsBox.setFillWidth(true);
+        itemsBox.setStyle("-fx-background-color: transparent;");
 
         scrollPane.setFitToWidth(true);
-        scrollPane.setPrefViewportHeight(500);
+        scrollPane.setPrefViewportHeight(410);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
 
         VBox inset = new VBox(scrollPane);
-        inset.setPadding(new Insets(4));
+        inset.setPadding(new Insets(6));
         inset.setStyle(UiTheme.PANEL_INSET);
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
@@ -34,5 +36,9 @@ public class MailboxPanel extends DashboardCard {
 
     public VBox getItemsBox() {
         return itemsBox;
+    }
+
+    public void setViewportHeight(double height) {
+        scrollPane.setPrefViewportHeight(height);
     }
 }

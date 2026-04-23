@@ -5,6 +5,11 @@
   "message": "HOLAALUMNOS",
   "fragmentSize": 8,
   "packetLossRate": 0.0,
+  "baseLatencyMillis": 1200,
+  "jitterMillis": 0,
+  "duplicationRate": 0.0,
+  "reorderingRate": 0.0,
+  "bandwidthPacketsPerSecond": 0,
   "forcedLossIndexes": [],
   "educationalTopics": ["tcp", "handshake", "ack"]
 }

@@ -29,7 +29,8 @@ class SimulationApplicationServiceTest {
                 new JsonScenarioRepository()
         );
 
-        var result = service.start(new SimulationCommand(ProtocolType.UDP, "ABCDEF", 3, 0.0));
+        var result = service.start(new SimulationCommand(ProtocolType.UDP, "ABCDEF", 3, 0.0,
+                500L, 50L, 0.25, 0.25, 5));
 
         assertTrue(result.getFinalSnapshot().isCompleted());
     }

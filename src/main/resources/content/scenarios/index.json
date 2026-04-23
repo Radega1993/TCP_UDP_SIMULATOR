@@ -1,6 +1,10 @@
 {
   "files": [
     "tcp-handshake.json",
+    "tcp-congestion-growth.json",
+    "tcp-congestion-timeout.json",
+    "tcp-congestion-duplicate-ack.json",
+    "tcp-congestion-recovery.json",
     "udp-basic.json"
   ]
 }

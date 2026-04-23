@@ -1,0 +1,11 @@
+{
+  "id": "jitter",
+  "title": "Jitter",
+  "summary": "El jitter es la variación de la latencia entre paquetes consecutivos. Es especialmente importante en tráfico en tiempo real como voz o vídeo.",
+  "bullets": [
+    "Dos paquetes del mismo flujo pueden tardar tiempos distintos en llegar.",
+    "Un jitter alto favorece la llegada irregular y puede ayudar a producir desorden.",
+    "En tráfico interactivo suele ser tan importante como la latencia media."
+  ],
+  "scenarios": ["*"]
+}

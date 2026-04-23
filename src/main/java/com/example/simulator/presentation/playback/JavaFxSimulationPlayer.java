@@ -144,6 +144,8 @@ public class JavaFxSimulationPlayer {
             case PACKET_LOST -> listener.onPacketLost(event.getPacket());
             case TCP_STATE_CHANGED -> listener.onTcpStateChanged(event.getEndpoint(), event.getTcpState());
             case MESSAGE_DELIVERED -> listener.onMessageDelivered(event.getMessage());
+            case FLOW_CONTROL_UPDATED -> listener.onFlowControlUpdated(event.getFlowControlSnapshot());
+            case CONGESTION_UPDATED -> listener.onCongestionUpdated(event.getCongestionSnapshot());
             case SCENARIO_COMPLETED -> listener.onScenarioCompleted();
         }
     }
