@@ -1,0 +1,11 @@
+{
+  "id": "tcp",
+  "title": "¿Qué es TCP?",
+  "summary": "TCP es un protocolo orientado a conexión. Antes de intercambiar datos, cliente y servidor establecen una conexión. Además, TCP garantiza entrega fiable, orden correcto de los datos y retransmisión en caso de pérdida.",
+  "bullets": [
+    "El handshake 3-way sincroniza ambos extremos antes de enviar datos.",
+    "Los ACK confirman bytes recibidos, no solo paquetes aislados.",
+    "Una pérdida provoca timeout o mecanismos de recuperación."
+  ],
+  "scenarios": ["tcp-handshake", "protocol-tcp"]
+}

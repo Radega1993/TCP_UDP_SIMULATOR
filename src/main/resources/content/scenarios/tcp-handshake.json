@@ -1,0 +1,10 @@
+{
+  "id": "tcp-handshake",
+  "title": "Handshake TCP básico",
+  "protocol": "TCP",
+  "message": "HOLAALUMNOS",
+  "fragmentSize": 8,
+  "packetLossRate": 0.0,
+  "forcedLossIndexes": [],
+  "educationalTopics": ["tcp", "handshake", "ack"]
+}

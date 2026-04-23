@@ -1,0 +1,10 @@
+{
+  "id": "udp-basic",
+  "title": "Envio UDP básico",
+  "protocol": "UDP",
+  "message": "HOLAALUMNOS",
+  "fragmentSize": 3,
+  "packetLossRate": 0.2,
+  "forcedLossIndexes": [],
+  "educationalTopics": ["udp", "datagramas", "perdida"]
+}

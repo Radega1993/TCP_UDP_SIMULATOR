@@ -1,9 +1,10 @@
 package com.example.simulator.ui;
 
-import com.example.simulator.model.Endpoint;
-import com.example.simulator.model.Packet;
-import com.example.simulator.model.PacketKind;
-import com.example.simulator.model.ProtocolType;
+import com.example.simulator.domain.network.Endpoint;
+import com.example.simulator.domain.protocol.PacketKind;
+import com.example.simulator.domain.protocol.PacketStatus;
+import com.example.simulator.domain.protocol.ProtocolType;
+import com.example.simulator.domain.simulation.Packet;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -26,28 +27,29 @@ public class PacketNode extends StackPane {
         this.baseColor = colorFor(packet);
         this.defaultMeta = buildMeta(packet);
 
-        background = new Rectangle(150, 82);
-        background.setArcHeight(16);
-        background.setArcWidth(16);
+        background = new Rectangle(164, 92);
+        background.setArcHeight(20);
+        background.setArcWidth(20);
         background.setFill(baseColor);
-        background.setStroke(Color.web("#334155"));
-        background.setStrokeWidth(2.0);
+        background.setStroke(Color.web("#35506b"));
+        background.setStrokeWidth(1.8);
 
         titleLabel = new Label(buildTitle(packet));
-        titleLabel.setStyle("-fx-text-fill: #0f172a; -fx-font-size: 12px; -fx-font-weight: bold;");
+        titleLabel.setStyle("-fx-text-fill: #102033; -fx-font-size: 12px; -fx-font-weight: bold;");
         metaLabel = new Label(defaultMeta);
-        metaLabel.setStyle("-fx-text-fill: #1f2937; -fx-font-size: 11px; -fx-font-weight: bold;");
+        metaLabel.setStyle("-fx-text-fill: #304255; -fx-font-size: 10px; -fx-font-weight: bold;");
         payloadLabel = new Label(buildPayloadPreview(packet));
-        payloadLabel.setStyle("-fx-text-fill: #0f172a; -fx-font-size: 11px;");
+        payloadLabel.setStyle("-fx-text-fill: #15283c; -fx-font-size: 11px;");
         payloadLabel.setWrapText(true);
-        payloadLabel.setMaxWidth(136);
+        payloadLabel.setMaxWidth(146);
 
-        VBox content = new VBox(3, titleLabel, metaLabel, payloadLabel);
+        VBox content = new VBox(4, titleLabel, metaLabel, payloadLabel);
         content.setAlignment(Pos.CENTER);
-        content.setPadding(new Insets(6));
+        content.setPadding(new Insets(8));
 
         setAlignment(Pos.CENTER);
         getChildren().addAll(background, content);
+        setStyle("-fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.12), 12, 0.18, 0, 4);");
         if (packet.isRetransmission() || packet.getKind() == PacketKind.RETRANSMISSION) {
             markRetransmitted();
         }
@@ -106,6 +108,7 @@ public class PacketNode extends StackPane {
     }
 
     public void markDelivered() {
+        packet.setStatus(PacketStatus.DELIVERED);
         boolean retried = packet.isRetransmission() || packet.getKind() == PacketKind.RETRANSMISSION;
         background.setStroke(retried ? Color.web("#f97316") : Color.web("#16a34a"));
         background.setStrokeWidth(3.0);
@@ -114,6 +117,7 @@ public class PacketNode extends StackPane {
     }
 
     public void markLost() {
+        packet.setStatus(PacketStatus.LOST);
         background.setFill(Color.web("#fecaca"));
         background.setStroke(Color.web("#b91c1c"));
         background.setStrokeWidth(3.0);

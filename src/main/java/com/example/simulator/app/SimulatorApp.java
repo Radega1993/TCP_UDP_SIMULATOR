@@ -1,10 +1,26 @@
 package com.example.simulator.app;
 
-import com.example.simulator.engine.SimulationEngine;
-import com.example.simulator.engine.SimulationListener;
-import com.example.simulator.model.*;
-import com.example.simulator.model.PacketKind;
+import com.example.simulator.application.dto.SimulationCommand;
+import com.example.simulator.domain.network.Endpoint;
+import com.example.simulator.domain.protocol.PacketKind;
+import com.example.simulator.domain.protocol.PacketStatus;
+import com.example.simulator.domain.protocol.ProtocolType;
+import com.example.simulator.domain.protocol.tcp.TcpState;
+import com.example.simulator.domain.scenario.Scenario;
+import com.example.simulator.domain.simulation.Packet;
+import com.example.simulator.presentation.playback.JavaFxSimulationPlayer;
+import com.example.simulator.presentation.playback.SimulationPlaybackListener;
+import com.example.simulator.presentation.viewmodel.SimulationViewModel;
+import com.example.simulator.ui.ControlPanel;
+import com.example.simulator.ui.DashboardCard;
+import com.example.simulator.ui.EventLogPanel;
+import com.example.simulator.ui.MailboxPanel;
+import com.example.simulator.ui.MessageSummaryPanel;
+import com.example.simulator.ui.NetworkCanvas;
 import com.example.simulator.ui.PacketNode;
+import com.example.simulator.ui.SimulatorHeader;
+import com.example.simulator.ui.StatePanel;
+import com.example.simulator.ui.UiTheme;
 import javafx.animation.FadeTransition;
 import javafx.animation.PauseTransition;
 import javafx.animation.ScaleTransition;
@@ -19,7 +35,6 @@ import javafx.scene.image.Image;
 import javafx.scene.layout.*;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -36,19 +51,23 @@ import java.util.Map;
 import java.util.Set;
 
 
-public class SimulatorApp extends Application implements SimulationListener {
+public class SimulatorApp extends Application implements SimulationPlaybackListener {
     private Pane networkPane;
+    private NetworkCanvas networkCanvas;
     private TextArea logArea;
     private TextArea packetDetailsArea;
     private TextArea clientDataArea;
     private TextArea serverDataArea;
+    private TextArea theoryArea;
     private VBox clientPacketList;
     private VBox serverPacketList;
     private Label clientStateLabel;
     private Label serverStateLabel;
     private Label statusLabel;
-    private SimulationEngine engine;
+    private SimulationViewModel viewModel;
+    private JavaFxSimulationPlayer player;
     private ComboBox<ProtocolType> protocolSelector;
+    private ComboBox<Scenario> scenarioSelector;
     private Slider lossSlider;
     private Slider speedSlider;
     private TextField messageField;
@@ -62,7 +81,11 @@ public class SimulatorApp extends Application implements SimulationListener {
     private Button reviewStepForwardButton;
     private Button reviewFirstButton;
     private Button reviewLastButton;
+    private Button playPauseButton;
+    private Button liveStepButton;
     private Label stepIndicatorLabel;
+    private List<Scenario> scenarios = List.of();
+    private ControlPanel controlPanel;
     private final List<UiSnapshot> uiSnapshots = new ArrayList<>();
     private int currentSnapshotIndex = -1;
     private boolean restoringSnapshot = false;
@@ -88,98 +111,75 @@ public class SimulatorApp extends Application implements SimulationListener {
     @Override
     public void start(Stage stage) {
         primaryStage = stage;
-        engine = new SimulationEngine(this);
+        Bootstrap bootstrap = new Bootstrap();
+        viewModel = bootstrap.createSimulationViewModel();
+        player = new JavaFxSimulationPlayer(this);
+        scenarios = viewModel.availableScenarios();
 
         BorderPane root = new BorderPane();
         root.setPadding(new Insets(16));
-        root.setStyle("-fx-background-color: linear-gradient(to bottom, #f8fafc, #e2e8f0);");
+        root.setStyle(UiTheme.APP_BACKGROUND);
 
         root.setTop(buildHeader());
         root.setCenter(buildCenter());
         root.setRight(buildRightPanel());
         root.setBottom(buildFooter());
 
-        Scene scene = new Scene(root, 1380, 780);
+        Scene scene = new Scene(root, 1500, 860);
         stage.setTitle("Simulador gráfico TCP y UDP - JavaFX");
         stage.setScene(scene);
         loadAppIcon(stage);
         stage.setMaximized(true);
         stage.show();
 
-        engine.reset();
+        onReset();
     }
 
     private VBox buildHeader() {
-        Label title = new Label("Simulador gráfico de TCP y UDP");
-        title.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #0f172a;");
-
-        Label subtitle = new Label("Visualiza handshake, envío de datos, ACKs, pérdidas y retransmisiones");
-        subtitle.setStyle("-fx-font-size: 14px; -fx-text-fill: #334155;");
-
-        VBox box = new VBox(4, title, subtitle);
-        box.setPadding(new Insets(0, 0, 16, 0));
+        VBox box = new VBox(new SimulatorHeader());
+        box.setPadding(new Insets(0, 0, 18, 0));
         return box;
     }
 
     private VBox buildCenter() {
-        networkPane = new Pane();
-        networkPane.setPrefSize(900, 520);
-        networkPane.setStyle("-fx-background-color: white; -fx-border-color: #cbd5e1; -fx-border-radius: 18; -fx-background-radius: 18;");
+        networkCanvas = new NetworkCanvas();
+        networkPane = networkCanvas;
 
-        Rectangle clientBox = nodeBox(70, 190, "Cliente");
-        Rectangle serverBox = nodeBox(690, 190, "Servidor");
-        Label clientLabel = nodeLabel(120, 260, "Cliente");
-        Label serverLabel = nodeLabel(740, 260, "Servidor");
+        MailboxPanel clientHistoryCard = new MailboxPanel("Buzón cliente", "Salida del emisor");
+        MailboxPanel serverHistoryCard = new MailboxPanel("Buzón servidor", "Llegadas al receptor");
+        clientPacketList = clientHistoryCard.getItemsBox();
+        serverPacketList = serverHistoryCard.getItemsBox();
+        clientHistoryCard.setPrefWidth(236);
+        clientHistoryCard.setMinWidth(220);
+        serverHistoryCard.setPrefWidth(236);
+        serverHistoryCard.setMinWidth(220);
 
-        Line line = new Line(220, 220, 690, 220);
-        line.setStroke(Color.web("#94a3b8"));
-        line.setStrokeWidth(4);
+        HBox centerRow = new HBox(14, clientHistoryCard, networkCanvas, serverHistoryCard);
+        HBox.setHgrow(networkCanvas, Priority.ALWAYS);
+        VBox.setVgrow(centerRow, Priority.ALWAYS);
 
-        Label netLabel = new Label("Red");
-        netLabel.setLayoutX(435);
-        netLabel.setLayoutY(188);
-        netLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #475569;");
-
-        networkPane.getChildren().addAll(line, clientBox, serverBox, clientLabel, serverLabel, netLabel);
-
-        clientPacketList = packetListContainer();
-        serverPacketList = packetListContainer();
-        ScrollPane clientScroll = packetListScroll(clientPacketList);
-        ScrollPane serverScroll = packetListScroll(serverPacketList);
-
-        VBox clientHistoryCard = card("Buzón Cliente", clientScroll);
-        clientHistoryCard.setPrefWidth(250);
-        VBox serverHistoryCard = card("Buzón Servidor", serverScroll);
-        serverHistoryCard.setPrefWidth(250);
-
-        HBox centerRow = new HBox(12, clientHistoryCard, networkPane, serverHistoryCard);
-        HBox.setHgrow(networkPane, Priority.ALWAYS);
-        VBox.setVgrow(clientScroll, Priority.ALWAYS);
-        VBox.setVgrow(serverScroll, Priority.ALWAYS);
-
-        VBox box = new VBox(12, centerRow, buildControls());
+        VBox box = new VBox(14, centerRow, buildControls());
         return box;
     }
 
     private Node buildRightPanel() {
-        VBox panel = new VBox(14);
-        panel.setPadding(new Insets(0, 0, 0, 16));
-        panel.setPrefWidth(420);
+        VBox panel = new VBox(16);
+        panel.setPadding(new Insets(0, 0, 0, 14));
+        panel.setPrefWidth(390);
+        panel.setMinWidth(360);
 
-        clientStateLabel = stateChip("Cliente: CLOSED");
-        serverStateLabel = stateChip("Servidor: CLOSED");
-        statusLabel = new Label("Listo para iniciar");
-        statusLabel.setWrapText(true);
-        statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #1e293b;");
-
-        VBox statesCard = card("Estados", new VBox(10, clientStateLabel, serverStateLabel, statusLabel));
+        StatePanel statePanel = new StatePanel();
+        clientStateLabel = statePanel.getClientStateLabel();
+        serverStateLabel = statePanel.getServerStateLabel();
+        statusLabel = statePanel.getStatusLabel();
 
         packetDetailsArea = new TextArea();
         packetDetailsArea.setEditable(false);
         packetDetailsArea.setWrapText(true);
-        packetDetailsArea.setPrefRowCount(9);
+        packetDetailsArea.setPrefRowCount(6);
         packetDetailsArea.setText("Selecciona un paquete para ver su detalle.");
-        VBox detailsCard = card("Detalle del paquete", packetDetailsArea);
+        packetDetailsArea.setStyle(UiTheme.MUTED_TEXT_SURFACE);
+        VBox detailsCard = card("Detalle del paquete", "Inspección rápida del paquete seleccionado.", wrapInset(packetDetailsArea));
 
         VBox legend = new VBox(6,
                 legendRow(Color.web("#93c5fd"), "Azul claro: TCP SYN"),
@@ -190,29 +190,34 @@ public class SimulatorApp extends Application implements SimulationListener {
                 legendRow(Color.web("#fecaca"), "Rojo: Perdido"),
                 legendRow(Color.web("#fed7aa"), "Naranja: Retransmitido")
         );
-        VBox legendCard = card("Leyenda visual", legend);
+        legend.setPadding(new Insets(6));
+        VBox legendCard = card("Leyenda visual", "Código cromático de los paquetes y eventos principales.", wrapInset(legend));
 
-        logArea = new TextArea();
-        logArea.setEditable(false);
-        logArea.setWrapText(true);
-        logArea.setPrefRowCount(16);
-        logArea.setStyle("-fx-font-family: 'Monospaced'; -fx-font-size: 12px;");
-        VBox logCard = card("Registro de eventos", logArea);
-        VBox.setVgrow(logArea, Priority.ALWAYS);
+        theoryArea = new TextArea();
+        theoryArea.setEditable(false);
+        theoryArea.setWrapText(true);
+        theoryArea.setPrefRowCount(11);
+        theoryArea.setStyle(UiTheme.TEXT_SURFACE);
+        theoryArea.setText(viewModel.helpTextForContext("*", protocolSelector != null ? protocolSelector.getValue() : ProtocolType.TCP));
+        VBox theoryCard = card("Teoría y ayuda", "Apoyo docente contextual para interpretar lo que ves en la simulación.", wrapInset(theoryArea));
+        VBox.setVgrow(theoryArea, Priority.ALWAYS);
 
-        panel.getChildren().addAll(statesCard, detailsCard, legendCard, logCard);
-        VBox.setVgrow(logCard, Priority.ALWAYS);
+        EventLogPanel eventLogPanel = new EventLogPanel();
+        logArea = eventLogPanel.getLogArea();
+
+        panel.getChildren().addAll(statePanel, detailsCard, legendCard, theoryCard, eventLogPanel);
+        VBox.setVgrow(eventLogPanel, Priority.ALWAYS);
         return panel;
     }
 
     private VBox buildFooter() {
         Label hint = new Label("Consejo didáctico: ejecuta la misma palabra en TCP y UDP con una pérdida del 30-40% para comparar la fiabilidad.");
-        hint.setStyle("-fx-text-fill: #475569; -fx-font-size: 12px;");
-        clientDataArea = readonlyArea(5);
-        serverDataArea = readonlyArea(5);
-        VBox clientCard = card("Cliente: mensaje enviado", clientDataArea);
-        VBox serverCard = card("Servidor: mensaje recibido", serverDataArea);
-        HBox messages = new HBox(12, clientCard, serverCard);
+        hint.setStyle("-fx-text-fill: #617487; -fx-font-size: 12px;");
+        MessageSummaryPanel clientCard = new MessageSummaryPanel("Cliente: mensaje enviado", "Salida didáctica del emisor");
+        MessageSummaryPanel serverCard = new MessageSummaryPanel("Servidor: mensaje recibido", "Resultado visible en destino");
+        clientDataArea = clientCard.getTextArea();
+        serverDataArea = serverCard.getTextArea();
+        HBox messages = new HBox(16, clientCard, serverCard);
         HBox.setHgrow(clientCard, Priority.ALWAYS);
         HBox.setHgrow(serverCard, Priority.ALWAYS);
         VBox box = new VBox(10, messages, hint);
@@ -221,149 +226,138 @@ public class SimulatorApp extends Application implements SimulationListener {
     }
 
     private VBox buildControls() {
-        protocolSelector = new ComboBox<>();
-        protocolSelector.getItems().addAll(ProtocolType.TCP, ProtocolType.UDP);
-        protocolSelector.setValue(ProtocolType.TCP);
+        controlPanel = new ControlPanel(scenarios);
+        protocolSelector = controlPanel.getProtocolSelector();
+        scenarioSelector = controlPanel.getScenarioSelector();
+        messageField = controlPanel.getMessageField();
+        lossSlider = controlPanel.getLossSlider();
+        speedSlider = controlPanel.getSpeedSlider();
+        fragmentSizeSpinner = controlPanel.getFragmentSizeSpinner();
+        widthSpinner = controlPanel.getWidthSpinner();
+        heightSpinner = controlPanel.getHeightSpinner();
+        windowPresetSelector = controlPanel.getWindowPresetSelector();
+        playPauseButton = controlPanel.getPlayPauseButton();
+        liveStepButton = controlPanel.getLiveStepButton();
+        reviewFirstButton = controlPanel.getReviewFirstButton();
+        reviewStepBackButton = controlPanel.getReviewStepBackButton();
+        reviewStepForwardButton = controlPanel.getReviewStepForwardButton();
+        reviewLastButton = controlPanel.getReviewLastButton();
+        stepIndicatorLabel = controlPanel.getStepIndicatorLabel();
+        reviewControlsBox = controlPanel.getReviewControlsBox();
 
-        messageField = new TextField("HOLAALUMNOS");
+        scenarioSelector.setOnAction(event -> applyScenarioSelection(scenarioSelector.getValue()));
 
-        lossSlider = new Slider(0, 100, 20);
-        lossSlider.setShowTickLabels(true);
-        lossSlider.setShowTickMarks(true);
-        lossSlider.setMajorTickUnit(25);
-
-        speedSlider = new Slider(0.5, 3.0, 1.0);
-        speedSlider.setShowTickLabels(true);
-        speedSlider.setShowTickMarks(true);
-        speedSlider.setMajorTickUnit(0.5);
-
-        widthSpinner = new Spinner<>(980, 2000, 1380, 20);
-        widthSpinner.setEditable(true);
-        heightSpinner = new Spinner<>(680, 1400, 780, 20);
-        heightSpinner.setEditable(true);
-        fragmentSizeSpinner = new Spinner<>(1, 16, 8, 1);
-        fragmentSizeSpinner.setEditable(true);
-        windowPresetSelector = new ComboBox<>();
-        windowPresetSelector.getItems().addAll("1280x720", "1366x768", "1600x900", "1920x1080");
-        windowPresetSelector.setValue("1366x768");
-
-        Button runButton = new Button("Iniciar simulación");
-        Button resetButton = new Button("Reiniciar");
-        Button applySizeButton = new Button("Aplicar tamaño");
-        Button presetSizeButton = new Button("Usar preset");
-        reviewFirstButton = new Button("|<");
-        reviewStepBackButton = new Button("Paso <-");
-        reviewStepForwardButton = new Button("Paso ->");
-        reviewLastButton = new Button(">|");
-        stepIndicatorLabel = new Label("Paso: 0/0");
-        stepIndicatorLabel.setStyle("-fx-text-fill: #334155; -fx-font-weight: bold;");
-
-        runButton.setStyle("-fx-background-color: #2563eb; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
-        resetButton.setStyle("-fx-background-color: #e2e8f0; -fx-text-fill: #0f172a; -fx-font-weight: bold; -fx-background-radius: 10;");
-        applySizeButton.setStyle("-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
-        presetSizeButton.setStyle("-fx-background-color: #38bdf8; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
-        reviewFirstButton.setStyle("-fx-background-color: #4338ca; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
-        reviewStepBackButton.setStyle("-fx-background-color: #6366f1; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
-        reviewStepForwardButton.setStyle("-fx-background-color: #4f46e5; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
-        reviewLastButton.setStyle("-fx-background-color: #3730a3; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
-        runButton.setPrefHeight(38);
-        resetButton.setPrefHeight(38);
-        applySizeButton.setPrefHeight(38);
-        presetSizeButton.setPrefHeight(38);
-        reviewFirstButton.setPrefHeight(38);
-        reviewStepBackButton.setPrefHeight(38);
-        reviewStepForwardButton.setPrefHeight(38);
-        reviewLastButton.setPrefHeight(38);
-
-        runButton.setOnAction(event -> {
-            String inputMessage = normalizeMessage(messageField.getText());
-            scenarioStartRequested = true;
-            pendingMessage = inputMessage;
-            pendingProtocol = protocolSelector.getValue();
-            engine.setStepMode(false);
-            engine.setProtocolType(protocolSelector.getValue());
-            engine.setPacketLossRate(lossSlider.getValue() / 100.0);
-            engine.setSpeedFactor(speedSlider.getValue());
-            engine.setFragmentSize(fragmentSizeSpinner.getValue());
-            engine.runScenario(inputMessage);
-            statusLabel.setText("Simulación en vivo. Al terminar se habilita la revisión por pasos.");
-        });
-        resetButton.setOnAction(event -> {
+        controlPanel.getRunButton().setOnAction(event -> startSimulation());
+        controlPanel.getResetButton().setOnAction(event -> {
             scenarioStartRequested = false;
-            engine.reset();
+            player.stop();
+            viewModel.reset();
+            onReset();
         });
-        applySizeButton.setOnAction(event -> applyWindowSize());
-        presetSizeButton.setOnAction(event -> applyWindowPreset());
+        playPauseButton.setOnAction(event -> togglePlaybackPause());
+        liveStepButton.setOnAction(event -> {
+            player.stepForward();
+            updatePlaybackButtons();
+        });
+        controlPanel.getApplySizeButton().setOnAction(event -> applyWindowSize());
+        controlPanel.getPresetSizeButton().setOnAction(event -> applyWindowPreset());
         reviewFirstButton.setOnAction(event -> goToFirstStep());
         reviewStepBackButton.setOnAction(event -> goToPreviousStep());
         reviewStepForwardButton.setOnAction(event -> goToNextStep());
         reviewLastButton.setOnAction(event -> goToLastStep());
-
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.add(new Label("Protocolo"), 0, 0);
-        grid.add(protocolSelector, 1, 0);
-        grid.add(new Label("Mensaje"), 0, 1);
-        grid.add(messageField, 1, 1);
-        grid.add(new Label("Pérdida (%)"), 0, 2);
-        grid.add(lossSlider, 1, 2);
-        grid.add(new Label("Velocidad"), 0, 3);
-        grid.add(speedSlider, 1, 3);
-        grid.add(new Label("Fragmento (1,2,3...)"), 0, 4);
-        grid.add(fragmentSizeSpinner, 1, 4);
-        grid.add(new Label("Ancho ventana"), 0, 5);
-        grid.add(widthSpinner, 1, 5);
-        grid.add(new Label("Alto ventana"), 0, 6);
-        grid.add(heightSpinner, 1, 6);
-        grid.add(new Label("Preset ventana"), 0, 7);
-        grid.add(windowPresetSelector, 1, 7);
-
-        HBox buttons = new HBox(10, runButton, resetButton, applySizeButton, presetSizeButton);
-        buttons.setAlignment(Pos.CENTER_LEFT);
-        reviewControlsBox = new HBox(10, new Label("Revisión:"), reviewFirstButton, reviewStepBackButton, reviewStepForwardButton, reviewLastButton, stepIndicatorLabel);
-        reviewControlsBox.setAlignment(Pos.CENTER_LEFT);
-        reviewControlsBox.setVisible(false);
-        reviewControlsBox.setManaged(false);
-
-        VBox cardContent = new VBox(12, grid, buttons, reviewControlsBox);
-        return card("Controles", cardContent);
+        protocolSelector.setOnAction(event -> refreshTheoryPanel());
+        updatePlaybackButtons();
+        return controlPanel;
     }
 
-    private VBox card(String title, javafx.scene.Node content) {
-        Label heading = new Label(title);
-        heading.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #0f172a;");
+    private void startSimulation() {
+        Scenario selectedScenario = scenarioSelector.getValue();
+        String inputMessage = normalizeMessage(messageField.getText());
+        scenarioStartRequested = true;
+        pendingMessage = inputMessage;
+        pendingProtocol = protocolSelector.getValue();
+        var result = selectedScenario != null
+                ? viewModel.start(selectedScenario)
+                : viewModel.start(new SimulationCommand(
+                        protocolSelector.getValue(),
+                        inputMessage,
+                        fragmentSizeSpinner.getValue(),
+                        lossSlider.getValue() / 100.0
+                ));
 
-        VBox card = new VBox(12, heading, content);
-        card.setPadding(new Insets(16));
-        card.setStyle("-fx-background-color: white; -fx-border-color: #cbd5e1; -fx-border-radius: 18; -fx-background-radius: 18;");
+        if (result.getEvents().isEmpty()) {
+            statusLabel.setText("La simulación no generó eventos.");
+            return;
+        }
+
+        if (selectedScenario != null) {
+            pendingMessage = selectedScenario.getMessage();
+            pendingProtocol = selectedScenario.getProtocol();
+        } else {
+            pendingProtocol = protocolSelector.getValue();
+        }
+        player.load(result, speedSlider.getValue());
+        player.play();
+        updatePlaybackButtons();
+        statusLabel.setText("Simulación en vivo. Eventos cargados: " + result.getEvents().size());
+        refreshTheoryPanel();
+    }
+
+    private void togglePlaybackPause() {
+        if (!player.hasRemainingEvents()) {
+            updatePlaybackButtons();
+            return;
+        }
+        if (player.isPaused()) {
+            player.play();
+        } else {
+            player.pause();
+        }
+        updatePlaybackButtons();
+    }
+
+    private void updatePlaybackButtons() {
+        if (playPauseButton == null || liveStepButton == null) {
+            return;
+        }
+        boolean hasRemaining = player != null && player.hasRemainingEvents();
+        boolean paused = player == null || player.isPaused();
+        playPauseButton.setDisable(!hasRemaining);
+        liveStepButton.setDisable(!hasRemaining);
+        playPauseButton.setText(paused ? "Reanudar" : "Pausar");
+    }
+
+    private void applyScenarioSelection(Scenario scenario) {
+        if (scenario == null) {
+            refreshTheoryPanel();
+            return;
+        }
+        protocolSelector.setValue(scenario.getProtocol());
+        messageField.setText(scenario.getMessage());
+        fragmentSizeSpinner.getValueFactory().setValue(scenario.getFragmentSize());
+        lossSlider.setValue(scenario.getNetworkConditions().getPacketLossRate() * 100.0);
+        refreshTheoryPanel();
+    }
+
+    private void refreshTheoryPanel() {
+        if (theoryArea == null || protocolSelector == null) {
+            return;
+        }
+        Scenario selectedScenario = scenarioSelector != null ? scenarioSelector.getValue() : null;
+        String scenarioId = selectedScenario == null ? "*" : selectedScenario.getId();
+        theoryArea.setText(viewModel.helpTextForContext(scenarioId, protocolSelector.getValue()));
+    }
+
+    private VBox card(String title, Node content) {
+        DashboardCard card = new DashboardCard(title);
+        card.setContent(content);
         return card;
     }
 
-    private Rectangle nodeBox(double x, double y, String text) {
-        Rectangle rect = new Rectangle(150, 70);
-        rect.setX(x);
-        rect.setY(y);
-        rect.setArcWidth(22);
-        rect.setArcHeight(22);
-        rect.setFill(Color.web("#dbeafe"));
-        rect.setStroke(Color.web("#2563eb"));
-        rect.setStrokeWidth(2.0);
-        return rect;
-    }
-
-    private Label nodeLabel(double x, double y, String text) {
-        Label label = new Label(text);
-        label.setLayoutX(x);
-        label.setLayoutY(y);
-        label.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #0f172a;");
-        return label;
-    }
-
-    private Label stateChip(String text) {
-        Label label = new Label(text);
-        label.setStyle("-fx-background-color: #e2e8f0; -fx-background-radius: 999; -fx-padding: 8 12 8 12; -fx-font-weight: bold;");
-        return label;
+    private VBox card(String title, String subtitle, Node content) {
+        DashboardCard card = new DashboardCard(title, subtitle);
+        card.setContent(content);
+        return card;
     }
 
     private TextArea readonlyArea(int rows) {
@@ -371,7 +365,7 @@ public class SimulatorApp extends Application implements SimulationListener {
         area.setEditable(false);
         area.setWrapText(true);
         area.setPrefRowCount(rows);
-        area.setStyle("-fx-font-family: 'Monospaced'; -fx-font-size: 12px;");
+        area.setStyle(UiTheme.MONO + "-fx-control-inner-background: #f8fbfe; -fx-background-insets: 0; -fx-background-radius: 16;");
         return area;
     }
 
@@ -380,26 +374,20 @@ public class SimulatorApp extends Application implements SimulationListener {
         swatch.setArcWidth(6);
         swatch.setArcHeight(6);
         swatch.setFill(color);
-        swatch.setStroke(Color.web("#334155"));
+        swatch.setStroke(Color.web("#4a6075"));
         Label label = new Label(text);
-        label.setStyle("-fx-text-fill: #1e293b; -fx-font-size: 12px;");
+        label.setStyle("-fx-text-fill: #203246; -fx-font-size: 12px;");
         HBox row = new HBox(8, swatch, label);
         row.setAlignment(Pos.CENTER_LEFT);
         return row;
     }
 
-    private VBox packetListContainer() {
-        VBox box = new VBox(8);
-        box.setFillWidth(true);
-        return box;
-    }
-
-    private ScrollPane packetListScroll(VBox content) {
-        ScrollPane scroll = new ScrollPane(content);
-        scroll.setFitToWidth(true);
-        scroll.setPrefHeight(460);
-        scroll.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
-        return scroll;
+    private VBox wrapInset(Node content) {
+        VBox wrapper = new VBox(content);
+        wrapper.setPadding(new Insets(6));
+        wrapper.setStyle(UiTheme.PANEL_INSET_TINT);
+        VBox.setVgrow(content, Priority.ALWAYS);
+        return wrapper;
     }
 
     private String normalizeMessage(String raw) {
@@ -658,14 +646,14 @@ public class SimulatorApp extends Application implements SimulationListener {
 
     @Override
     public void onLog(String message) {
-        Platform.runLater(() -> {
+        runOnFxThread(() -> {
             logArea.appendText(formatLog(message) + "\n");
         });
     }
 
     @Override
     public void onPacketCreated(Packet packet) {
-        Platform.runLater(() -> {
+        runOnFxThread(() -> {
             PacketNode node = new PacketNode(packet);
             double startX = packet.getFrom() == Endpoint.CLIENT ? 200 : 640;
             double endX = packet.getTo() == Endpoint.SERVER ? 640 : 200;
@@ -694,7 +682,7 @@ public class SimulatorApp extends Application implements SimulationListener {
 
     @Override
     public void onPacketDelivered(Packet packet) {
-        Platform.runLater(() -> {
+        runOnFxThread(() -> {
             PacketNode node = packetNodes.get(packet.getId());
             if (node != null) {
                 double[] travel = packetTravel.get(packet.getId());
@@ -721,7 +709,7 @@ public class SimulatorApp extends Application implements SimulationListener {
 
     @Override
     public void onPacketLost(Packet packet) {
-        Platform.runLater(() -> {
+        runOnFxThread(() -> {
             PacketNode node = packetNodes.get(packet.getId());
             if (node != null) {
                 double[] travel = packetTravel.get(packet.getId());
@@ -744,7 +732,7 @@ public class SimulatorApp extends Application implements SimulationListener {
 
     @Override
     public void onTcpStateChanged(Endpoint endpoint, TcpState newState) {
-        Platform.runLater(() -> {
+        runOnFxThread(() -> {
             if (endpoint == Endpoint.CLIENT) {
                 clientStateLabel.setText("Cliente: " + newState);
             } else {
@@ -755,14 +743,14 @@ public class SimulatorApp extends Application implements SimulationListener {
 
     @Override
     public void onMessageDelivered(String message) {
-        Platform.runLater(() -> {
+        runOnFxThread(() -> {
             statusLabel.setText(message);
         });
     }
 
     @Override
     public void onScenarioCompleted() {
-        Platform.runLater(() -> {
+        runOnFxThread(() -> {
             recordSnapshot();
             if (reviewControlsBox != null) {
                 reviewControlsBox.setManaged(true);
@@ -772,13 +760,14 @@ public class SimulatorApp extends Application implements SimulationListener {
                 currentSnapshotIndex = uiSnapshots.size() - 1;
             }
             updateStepIndicator();
+            updatePlaybackButtons();
             statusLabel.setText("Simulación terminada. Usa los controles de revisión por pasos.");
         });
     }
 
     @Override
     public void onReset() {
-        Platform.runLater(() -> {
+        runOnFxThread(() -> {
             if (!restoringSnapshot) {
                 uiSnapshots.clear();
                 currentSnapshotIndex = -1;
@@ -805,6 +794,8 @@ public class SimulatorApp extends Application implements SimulationListener {
             clientDataArea.clear();
             serverDataArea.clear();
             statusLabel.setText("Listo para iniciar");
+            refreshTheoryPanel();
+            updatePlaybackButtons();
             if (scenarioStartRequested) {
                 scenarioStartMillis = System.currentTimeMillis();
                 currentMessage = pendingMessage;
@@ -841,6 +832,14 @@ public class SimulatorApp extends Application implements SimulationListener {
             }
             recordSnapshot();
         });
+    }
+
+    private void runOnFxThread(Runnable action) {
+        if (Platform.isFxApplicationThread()) {
+            action.run();
+        } else {
+            Platform.runLater(action);
+        }
     }
 
     private void showPacketDetails(Packet packet) {

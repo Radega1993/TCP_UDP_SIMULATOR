@@ -1,0 +1,11 @@
+{
+  "id": "how-to",
+  "title": "Cómo usarlo",
+  "summary": "Selecciona protocolo, selecciona escenario, configura red, ejecuta, pausa, avanza paso a paso y observa el log, los estados y los resultados.",
+  "bullets": [
+    "El selector de escenarios carga configuraciones reutilizables desde JSON.",
+    "Puedes pausar la reproducción y avanzar evento a evento.",
+    "El registro central te ayuda a relacionar lo visual con el comportamiento del protocolo."
+  ],
+  "scenarios": ["*"]
+}

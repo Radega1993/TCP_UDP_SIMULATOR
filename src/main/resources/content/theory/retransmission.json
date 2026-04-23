@@ -1,0 +1,11 @@
+{
+  "id": "retransmission",
+  "title": "Retransmisión",
+  "summary": "Si TCP no recibe confirmación dentro de un tiempo determinado, asume que hubo pérdida y retransmite el segmento.",
+  "bullets": [
+    "La retransmisión es una de las claves de la fiabilidad de TCP.",
+    "UDP no realiza esta recuperación de forma nativa.",
+    "Puedes forzar pérdidas para observar este comportamiento en clase."
+  ],
+  "scenarios": ["tcp-handshake", "protocol-tcp"]
+}

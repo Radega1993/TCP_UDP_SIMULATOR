@@ -1,0 +1,11 @@
+{
+  "id": "ack",
+  "title": "ACK",
+  "summary": "Un ACK es un acuse de recibo. Indica que el receptor ha recibido correctamente datos hasta un cierto número de secuencia.",
+  "bullets": [
+    "Permite confirmar recepción fiable en TCP.",
+    "Ayuda a detectar pérdidas cuando el ACK no llega.",
+    "En esta simulación aparece después del handshake y de los segmentos de datos."
+  ],
+  "scenarios": ["tcp-handshake", "protocol-tcp"]
+}

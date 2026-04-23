@@ -1,0 +1,11 @@
+{
+  "id": "intro",
+  "title": "¿Qué es este simulador?",
+  "summary": "Este simulador permite observar visualmente cómo se comportan los protocolos TCP y UDP en una red. Su objetivo no es replicar todos los detalles de una implementación real al 100%, sino mostrar de forma clara los conceptos fundamentales que se estudian en redes.",
+  "bullets": [
+    "Muestra eventos, estados, pérdidas y confirmaciones de forma visual.",
+    "Se puede usar para comparar fiabilidad frente a simplicidad.",
+    "El motor funciona separado de JavaFX para facilitar pruebas y evolución."
+  ],
+  "scenarios": ["*"]
+}

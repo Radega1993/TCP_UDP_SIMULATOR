@@ -1,0 +1,11 @@
+{
+  "id": "udp",
+  "title": "¿Qué es UDP?",
+  "summary": "UDP es un protocolo no orientado a conexión. Envía datagramas sin establecer conexión previa y sin confirmar recepción. Es más ligero y rápido, pero no garantiza entrega ni orden.",
+  "bullets": [
+    "Tiene menos sobrecarga y menor latencia de arranque.",
+    "La aplicación debe tolerar pérdidas o reordenamiento.",
+    "Es útil cuando importa más la rapidez que la fiabilidad."
+  ],
+  "scenarios": ["udp-basic", "protocol-udp"]
+}

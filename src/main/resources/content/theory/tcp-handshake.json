@@ -1,0 +1,12 @@
+{
+  "id": "tcp-handshake",
+  "title": "Handshake TCP",
+  "summary": "El three-way handshake es el proceso mediante el cual TCP establece una conexión entre cliente y servidor.",
+  "bullets": [
+    "El cliente envía SYN.",
+    "El servidor responde con SYN-ACK.",
+    "El cliente responde con ACK.",
+    "Tras esto, la conexión pasa a estado ESTABLISHED."
+  ],
+  "scenarios": ["tcp-handshake", "protocol-tcp"]
+}
