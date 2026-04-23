@@ -9,7 +9,6 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -32,15 +31,14 @@ public class CongestionPanel extends DashboardCard {
     public CongestionPanel() {
         super("TCP", "Congestión", "Estado de cwnd, ssthresh, duplicate ACK y crecimiento de la ventana.");
 
-        GridPane stats = new GridPane();
-        stats.setHgap(10);
-        stats.setVgap(10);
-        stats.add(statRow("Fase", phaseValue, null), 0, 0);
-        stats.add(statRow("cwnd", cwndValue, "Ventana de congestión. Limita la cantidad de datos en vuelo para evitar saturar la red."), 1, 0);
-        stats.add(statRow("ssthresh", ssthreshValue, "Umbral que separa la fase de slow start de la fase de congestion avoidance."), 0, 1);
-        stats.add(statRow("Duplicate ACK", duplicateAckValue, "ACK repetido que indica que el receptor sigue esperando un segmento anterior."), 1, 1);
-        stats.add(statRow("Bytes en vuelo", bytesInFlightValue, null), 0, 2);
-        stats.add(statRow("Ventana efectiva", effectiveWindowValue, null), 1, 2);
+        VBox stats = new VBox(8,
+                statRow("Fase", phaseValue, null),
+                statRow("cwnd", cwndValue, "Ventana de congestión. Limita la cantidad de datos en vuelo para evitar saturar la red."),
+                statRow("ssthresh", ssthreshValue, "Umbral que separa la fase de slow start de la fase de congestion avoidance."),
+                statRow("Duplicate ACK", duplicateAckValue, "ACK repetido que indica que el receptor sigue esperando un segmento anterior."),
+                statRow("Bytes en vuelo", bytesInFlightValue, null),
+                statRow("Ventana efectiva", effectiveWindowValue, null)
+        );
 
         reasonLabel.setWrapText(true);
         reasonLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #42586d;");
@@ -121,6 +119,9 @@ public class CongestionPanel extends DashboardCard {
 
         HBox row = new HBox(6, label);
         row.setAlignment(Pos.CENTER_LEFT);
+        row.setMaxWidth(Double.MAX_VALUE);
+        row.setStyle(UiTheme.PANEL_INSET);
+        row.setPadding(new Insets(8, 10, 8, 10));
         if (tooltipText != null) {
             Label hint = new Label("?");
             hint.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #2d6df6;"
@@ -139,6 +140,10 @@ public class CongestionPanel extends DashboardCard {
 
     private Label chip(String text) {
         Label label = new Label(text);
+        label.setWrapText(true);
+        label.setMinWidth(Region.USE_PREF_SIZE);
+        label.setMaxWidth(130);
+        label.setAlignment(Pos.CENTER);
         label.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #274057;"
                 + "-fx-background-color: #eef4fb; -fx-background-radius: 999; -fx-padding: 5 8 5 8;");
         return label;

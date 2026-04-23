@@ -45,6 +45,9 @@ public class ComparisonProtocolPane extends DashboardCard implements SimulationP
     private final Consumer<String> packetDetailsOpener;
     private final NetworkCanvas networkCanvas = new NetworkCanvas();
     private final Pane networkPane = networkCanvas;
+    private final SequenceDiagramView sequenceDiagramView;
+    private final StackPane simulationModeStack;
+    private final DashboardCard simulationCard;
     private final VBox clientPacketList;
     private final VBox serverPacketList;
     private final Label clientStateLabel;
@@ -88,7 +91,7 @@ public class ComparisonProtocolPane extends DashboardCard implements SimulationP
         clientCard.setMinWidth(110);
         serverCard.setMinWidth(110);
 
-        DashboardCard simulationCard = new DashboardCard("SIMULACIÓN", "Escena del protocolo", "Cliente, red y servidor en una vista espejo.");
+        simulationCard = new DashboardCard("SIMULACIÓN", "Escena del protocolo", "Cliente, red y servidor en una vista espejo.");
         simulationCard.setPrefHeight(400);
         simulationCard.setMinHeight(400);
         simulationCard.setMaxHeight(400);
@@ -119,7 +122,14 @@ public class ComparisonProtocolPane extends DashboardCard implements SimulationP
         HBox networkRow = new HBox(14, clientCard, simulationStage, serverCard);
         networkRow.setAlignment(Pos.TOP_LEFT);
         HBox.setHgrow(simulationStage, Priority.ALWAYS);
-        simulationCard.setContent(networkRow);
+        sequenceDiagramView = new SequenceDiagramView(
+                protocol == ProtocolType.TCP ? "Diagrama secuencial TCP" : "Diagrama secuencial UDP",
+                packetDetailsOpener
+        );
+        sequenceDiagramView.setVisible(false);
+        sequenceDiagramView.setManaged(false);
+        simulationModeStack = new StackPane(networkRow, sequenceDiagramView);
+        simulationCard.setContent(simulationModeStack);
 
         StatePanel statePanel = new StatePanel();
         clientStateLabel = statePanel.getClientStateLabel();
@@ -170,6 +180,16 @@ public class ComparisonProtocolPane extends DashboardCard implements SimulationP
         onReset();
     }
 
+    public void setViewMode(SimulationViewMode mode) {
+        boolean scene = mode == SimulationViewMode.SCENE;
+        simulationModeStack.getChildren().get(0).setVisible(scene);
+        simulationModeStack.getChildren().get(0).setManaged(scene);
+        sequenceDiagramView.setVisible(!scene);
+        sequenceDiagramView.setManaged(!scene);
+        simulationCard.setTitle(scene ? "Escena del protocolo" : "Diagrama temporal",
+                scene ? "Cliente, red y servidor en una vista espejo." : "Intercambio de mensajes ordenado en el tiempo.");
+    }
+
     public boolean hasRemainingEvents() {
         return player.hasRemainingEvents();
     }
@@ -180,7 +200,10 @@ public class ComparisonProtocolPane extends DashboardCard implements SimulationP
 
     @Override
     public void onLog(String message) {
-        runOnFxThread(() -> logArea.appendText(message + "\n"));
+        runOnFxThread(() -> {
+            logArea.appendText(message + "\n");
+            sequenceDiagramView.addLogEvent(message, protocol);
+        });
     }
 
     @Override
@@ -196,6 +219,7 @@ public class ComparisonProtocolPane extends DashboardCard implements SimulationP
             networkPane.getChildren().add(node);
             packetNodes.put(packet.getId(), node);
             packetTravel.put(packet.getId(), new double[]{startX, endX});
+            sequenceDiagramView.addPacket(packet);
 
             TranslateTransition transition = new TranslateTransition(Duration.millis(950), node);
             transition.setToX(endX - startX);
@@ -229,6 +253,7 @@ public class ComparisonProtocolPane extends DashboardCard implements SimulationP
                 pulse.play();
             }
             statusLabel.setText("Entregado: " + packet.label());
+            sequenceDiagramView.markPacketDelivered(packet);
             updateMessagePanelsOnDelivered(packet);
             archivePacketCard(packet, packet.getTo());
         });
@@ -250,6 +275,7 @@ public class ComparisonProtocolPane extends DashboardCard implements SimulationP
                 fade.play();
             }
             statusLabel.setText("Perdido: " + packet.label());
+            sequenceDiagramView.markPacketLost(packet);
             updateMessagePanelsOnLost(packet);
             archivePacketCard(packet, packet.getFrom());
         });
@@ -292,6 +318,7 @@ public class ComparisonProtocolPane extends DashboardCard implements SimulationP
             tcpSentSegments.clear();
             tcpReceivedSegments.clear();
             tcpDeliveredMessage = "";
+            sequenceDiagramView.reset();
             sentArea.setText("Mensaje compartido:\n\"" + currentMessage + "\"");
             receivedArea.setText("Aún sin entrega.");
             clientStateLabel.setText("Cliente: CLOSED");

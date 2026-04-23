@@ -107,6 +107,11 @@ public class ComparisonModeView extends BorderPane {
         udpPane.stepForward();
     }
 
+    public void setViewMode(SimulationViewMode mode) {
+        tcpPane.setViewMode(mode);
+        udpPane.setViewMode(mode);
+    }
+
     public boolean hasRemainingEvents() {
         return tcpPane.hasRemainingEvents() || udpPane.hasRemainingEvents();
     }

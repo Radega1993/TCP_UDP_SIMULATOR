@@ -1,6 +1,7 @@
 com/example/simulator/ui/SlidingWindowPanel.class
 com/example/simulator/presentation/playback/JavaFxSimulationPlayer$1.class
 com/example/simulator/domain/protocol/tcp/TcpState.class
+com/example/simulator/ui/SequenceDiagramEventViewModel.class
 com/example/simulator/ui/ComparisonSummaryPanel.class
 com/example/simulator/domain/simulation/ScheduledSimulationEvent.class
 com/example/simulator/ui/SimulatorHeader.class
@@ -27,6 +28,7 @@ com/example/simulator/ui/CwndChartPanel.class
 com/example/simulator/ui/PacketNode$1.class
 com/example/simulator/presentation/viewmodel/SimulationMode.class
 com/example/simulator/infrastructure/repository/json/JsonTheoryRepository$ResourceIndex.class
+com/example/simulator/ui/ViewModeToggle.class
 com/example/simulator/ui/UiTheme.class
 com/example/simulator/application/dto/ProtocolComparisonResult.class
 com/example/simulator/ui/MailboxPanel.class
@@ -63,6 +65,7 @@ com/example/simulator/application/services/ProtocolComparisonApplicationService.
 com/example/simulator/ui/NetworkCanvas.class
 com/example/simulator/ui/ComparisonModeView.class
 com/example/simulator/application/ports/in/StartSimulationUseCase.class
+com/example/simulator/ui/SequenceDiagramMapper.class
 com/example/simulator/domain/protocol/ProtocolType.class
 com/example/simulator/domain/protocol/PacketKind.class
 com/example/simulator/ui/DashboardCard.class
@@ -76,15 +79,20 @@ com/example/simulator/domain/simulation/SimulationScheduler.class
 com/example/simulator/domain/protocol/tcp/TcpReceiverBuffer.class
 com/example/simulator/ui/SectionHeader.class
 com/example/simulator/ui/ControlPanel$FieldEntry.class
+com/example/simulator/ui/SequenceDiagramMessageNode.class
 com/example/simulator/application/dto/ComparisonSummary.class
 com/example/simulator/domain/simulation/SimulationEventQueue.class
+com/example/simulator/ui/SimulationViewMode.class
 com/example/simulator/domain/simulation/SimulationEventType.class
 com/example/simulator/domain/simulation/CwndHistoryPoint.class
 com/example/simulator/application/ports/in/LoadScenarioUseCase.class
+com/example/simulator/ui/SequenceDiagramView$LifelineHeader.class
 com/example/simulator/ui/StyledButton$1.class
 com/example/simulator/application/services/SimulationApplicationService.class
 com/example/simulator/ui/ControlPanel.class
+com/example/simulator/ui/SequenceDiagramView.class
 com/example/simulator/domain/simulation/DefaultSimulationEngine.class
+com/example/simulator/ui/SequenceDiagramView$HBoxLike.class
 com/example/simulator/application/dto/ComparisonCommand.class
 com/example/simulator/domain/education/TheoryTopic.class
 com/example/simulator/ui/DualPaneLayout.class
@@ -95,4 +103,5 @@ com/example/simulator/domain/simulation/DefaultSimulationEngine$PendingAck.class
 com/example/simulator/domain/simulation/SimulationResult.class
 com/example/simulator/ui/CongestionPanel$1.class
 com/example/simulator/application/ports/out/TheoryRepository.class
+com/example/simulator/ui/SequenceDiagramMapper$1.class
 com/example/simulator/presentation/viewmodel/SimulationViewModel.class

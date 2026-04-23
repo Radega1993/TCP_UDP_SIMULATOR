@@ -30,11 +30,14 @@ import com.example.simulator.ui.MessageSummaryPanel;
 import com.example.simulator.ui.ModeLaunchCard;
 import com.example.simulator.ui.NetworkCanvas;
 import com.example.simulator.ui.PacketNode;
+import com.example.simulator.ui.SequenceDiagramView;
+import com.example.simulator.ui.SimulationViewMode;
 import com.example.simulator.ui.SimulatorHeader;
 import com.example.simulator.ui.SlidingWindowPanel;
 import com.example.simulator.ui.StyledButton;
 import com.example.simulator.ui.StatePanel;
 import com.example.simulator.ui.UiTheme;
+import com.example.simulator.ui.ViewModeToggle;
 import javafx.animation.FadeTransition;
 import javafx.animation.PauseTransition;
 import javafx.animation.ScaleTransition;
@@ -69,6 +72,7 @@ import javafx.scene.layout.*;
 public class SimulatorApp extends Application implements SimulationPlaybackListener {
     private Pane networkPane;
     private NetworkCanvas networkCanvas;
+    private SequenceDiagramView sequenceDiagramView;
     private TextArea logArea;
     private TextArea clientDataArea;
     private TextArea serverDataArea;
@@ -140,6 +144,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     private String currentTheoryText = "";
     private SlidingWindowPanel slidingWindowPanel;
     private CongestionPanel congestionPanel;
+    private ViewModeToggle viewModeToggle;
+    private SimulationViewMode currentViewMode = SimulationViewMode.DIAGRAM;
     private FlowControlSnapshot latestFlowControlSnapshot;
     private CongestionSnapshot latestCongestionSnapshot;
     private final List<CwndHistoryPoint> congestionHistory = new ArrayList<>();
@@ -282,6 +288,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         ));
         comparisonModeView.setVisible(false);
         comparisonModeView.setManaged(false);
+        comparisonModeView.setViewMode(currentViewMode);
 
         modeContentStack = new StackPane(simpleModeView, comparisonModeView);
         DashboardCard workspaceIntro = new DashboardCard("ESPACIO DE TRABAJO", "Simulación activa",
@@ -297,6 +304,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     private Node buildWorkspaceIntroBar() {
         StyledButton configButton = new StyledButton("Configurar simulación", StyledButton.Kind.SOFT);
         configButton.setOnAction(event -> openConfigurationModal());
+        viewModeToggle = new ViewModeToggle();
+        viewModeToggle.setOnModeChanged(this::applySimulationViewMode);
 
         FlowPane compactLegend = new FlowPane(12, 8,
                 compactLegendChip(Color.web("#93c5fd"), "TCP SYN"),
@@ -313,10 +322,25 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        HBox row = new HBox(16, configButton, spacer, compactLegend);
+        HBox row = new HBox(16, configButton, viewModeToggle, spacer, compactLegend);
         row.setAlignment(Pos.CENTER_LEFT);
         row.setPadding(new Insets(2, 0, 0, 0));
         return row;
+    }
+
+    private void applySimulationViewMode(SimulationViewMode mode) {
+        currentViewMode = mode;
+        if (sequenceDiagramView != null) {
+            sequenceDiagramView.setVisible(mode == SimulationViewMode.DIAGRAM);
+            sequenceDiagramView.setManaged(mode == SimulationViewMode.DIAGRAM);
+        }
+        if (simulationRow != null) {
+            simulationRow.setVisible(mode == SimulationViewMode.SCENE);
+            simulationRow.setManaged(mode == SimulationViewMode.SCENE);
+        }
+        if (comparisonModeView != null) {
+            comparisonModeView.setViewMode(mode);
+        }
     }
 
     private HBox compactLegendChip(Color color, String text) {
@@ -467,6 +491,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     private VBox buildSimpleCenter() {
         networkCanvas = new NetworkCanvas();
         networkPane = networkCanvas;
+        sequenceDiagramView = new SequenceDiagramView("Diagrama secuencial", this::openTextDetailFromDiagram);
+        sequenceDiagramView.setVisible(false);
+        sequenceDiagramView.setManaged(false);
 
         MailboxPanel clientHistoryCard = new MailboxPanel("Buzón cliente", "Salida del emisor");
         MailboxPanel serverHistoryCard = new MailboxPanel("Buzón servidor", "Llegadas al receptor");
@@ -487,14 +514,21 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
 
         DashboardCard simulationCard = new DashboardCard("SIMULACIÓN", "Escenario de red", "La zona principal de observación para seguir el tránsito de paquetes.");
         simulationCard.setStyle(UiTheme.HERO_CARD);
-        simulationCard.setContent(simulationRow);
+        StackPane simulationModeStack = new StackPane(simulationRow, sequenceDiagramView);
+        simulationCard.setContent(simulationModeStack);
         simulationCard.setMaxWidth(Double.MAX_VALUE);
 
         VBox box = new VBox(14, simulationCard);
         box.setFillWidth(true);
         box.setMaxWidth(Double.MAX_VALUE);
         box.setPrefWidth(1100);
+        applySimulationViewMode(currentViewMode);
         return box;
+    }
+
+    private void openTextDetailFromDiagram(String details) {
+        lastPacketDetailsText = details;
+        openPacketDetailsModal();
     }
 
     private Node buildLeftPanel() {
@@ -1045,6 +1079,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     public void onLog(String message) {
         runOnFxThread(() -> {
             logArea.appendText(formatLog(message) + "\n");
+            if (sequenceDiagramView != null) {
+                sequenceDiagramView.addLogEvent(message, currentProtocol);
+            }
         });
     }
 
@@ -1063,6 +1100,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             packetNodes.put(packet.getId(), node);
             packetTravel.put(packet.getId(), new double[]{startX, endX});
             packetLane.put(packet.getId(), lane);
+            if (sequenceDiagramView != null) {
+                sequenceDiagramView.addPacket(packet);
+            }
 
             TranslateTransition transition = new TranslateTransition(Duration.millis(1000), node);
             transition.setToX(endX - startX);
@@ -1099,6 +1139,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             }
             statusLabel.setText("Entregado: " + packet.label());
             rememberPacketDetails(packet);
+            if (sequenceDiagramView != null) {
+                sequenceDiagramView.markPacketDelivered(packet);
+            }
             updateMessagePanelsOnDelivered(packet);
             archivePacketCard(packet, packet.getTo());
         });
@@ -1122,6 +1165,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             }
             statusLabel.setText("Perdido: " + packet.label());
             rememberPacketDetails(packet);
+            if (sequenceDiagramView != null) {
+                sequenceDiagramView.markPacketLost(packet);
+            }
             updateMessagePanelsOnLost(packet);
             archivePacketCard(packet, packet.getFrom());
         });
@@ -1221,6 +1267,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             serverDataArea.clear();
             if (slidingWindowPanel != null) {
                 slidingWindowPanel.reset();
+            }
+            if (sequenceDiagramView != null) {
+                sequenceDiagramView.reset();
             }
             if (congestionPanel != null) {
                 congestionPanel.reset();

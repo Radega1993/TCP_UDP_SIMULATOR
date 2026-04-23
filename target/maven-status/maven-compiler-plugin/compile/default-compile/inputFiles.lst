@@ -2,6 +2,7 @@
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/application/ports/in/GetTheoryUseCase.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/application/services/TheoryApplicationService.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/app/Bootstrap.java
+/home/raul/Documents/network_simulator/src/main/java/com/example/simulator/ui/SequenceDiagramView.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/ui/MessageSummaryPanel.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/ui/SectionHeader.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/ui/ComparisonModeView.java
@@ -30,6 +31,7 @@
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/application/dto/SimulationCommand.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/infrastructure/repository/json/JsonScenarioRepository.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/ui/SimulatorHeader.java
+/home/raul/Documents/network_simulator/src/main/java/com/example/simulator/ui/ViewModeToggle.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/domain/simulation/Packet.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/domain/education/TheoryTopic.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/ui/EventLogPanel.java
@@ -42,6 +44,7 @@
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/domain/protocol/PacketStatus.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/domain/protocol/tcp/TcpSlidingWindow.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/app/SimulatorApp.java
+/home/raul/Documents/network_simulator/src/main/java/com/example/simulator/ui/SimulationViewMode.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/domain/simulation/DefaultSimulationEngine.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/application/services/ProtocolComparisonApplicationService.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/application/dto/ComparisonSummary.java
@@ -57,7 +60,9 @@
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/domain/network/Endpoint.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/ui/PacketNode.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/ui/TheoryTable.java
+/home/raul/Documents/network_simulator/src/main/java/com/example/simulator/ui/SequenceDiagramEventViewModel.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/domain/scenario/Scenario.java
+/home/raul/Documents/network_simulator/src/main/java/com/example/simulator/ui/SequenceDiagramMessageNode.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/presentation/playback/JavaFxSimulationPlayer.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/ui/BottomControlBar.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/ui/SlidingWindowPanel.java
@@ -66,6 +71,7 @@
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/domain/simulation/SimulationScheduler.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/domain/simulation/SimulationEventQueue.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/domain/simulation/SimulationSnapshot.java
+/home/raul/Documents/network_simulator/src/main/java/com/example/simulator/ui/SequenceDiagramMapper.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/application/ports/out/ScenarioRepository.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/infrastructure/repository/json/JsonResourceLoader.java
 /home/raul/Documents/network_simulator/src/main/java/com/example/simulator/domain/protocol/tcp/TcpState.java

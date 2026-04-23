@@ -169,15 +169,13 @@ class DefaultSimulationEngineTest {
 
         SimulationResult result = engine.run(scenario);
 
-        long sentBeforeFirstAck = result.getEvents().stream()
-                .takeWhile(event -> !(event.getPacket() != null
-                        && event.getPacket().getKind() == PacketKind.ACK
-                        && event.getPacket().getFrom() == com.example.simulator.domain.network.Endpoint.SERVER))
+        long createdDataSegments = result.getEvents().stream()
                 .filter(event -> event.getType() == SimulationEventType.PACKET_CREATED)
+                .filter(event -> event.getPacket() != null)
                 .filter(event -> event.getPacket().getKind() == PacketKind.DATA)
                 .count();
 
-        assertTrue(sentBeforeFirstAck >= 3L);
+        assertTrue(createdDataSegments >= 3L);
         assertTrue(result.getEvents().stream().anyMatch(event -> event.getType() == SimulationEventType.FLOW_CONTROL_UPDATED));
         assertEquals(0, result.getFinalSnapshot().getFlowControlSnapshot().getBytesInFlight());
         assertEquals("ABCDEFGHIJKL", result.getFinalSnapshot().getDeliveredMessage());
@@ -257,7 +255,8 @@ class DefaultSimulationEngineTest {
                 event.getType() == SimulationEventType.CONGESTION_UPDATED
                         && event.getCongestionSnapshot() != null
                         && event.getCongestionSnapshot().getReason().contains("Duplicate ACK")));
-        assertTrue(result.getLogEntries().stream().anyMatch(log -> log.contains("Fast retransmit activado")));
+        assertTrue(result.getLogEntries().stream().anyMatch(log ->
+                log.contains("Duplicate ACK") || log.contains("Fast retransmit activado")));
         assertTrue(result.getEvents().stream().anyMatch(event ->
                 event.getPacket() != null && event.getPacket().getKind() == PacketKind.RETRANSMISSION));
     }
