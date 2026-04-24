@@ -35,6 +35,11 @@ public class DashboardCard extends VBox {
         getChildren().set(headerIndex, header);
     }
 
+    public void setHeaderVisible(boolean visible) {
+        header.setVisible(visible);
+        header.setManaged(visible);
+    }
+
     public VBox getContentBox() {
         return contentBox;
     }

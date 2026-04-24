@@ -17,14 +17,19 @@ public class SequenceDiagramMessageNode extends Pane {
     private static final double RIGHT_X = 430;
 
     public SequenceDiagramMessageNode(SequenceDiagramEventViewModel model, Consumer<String> opener) {
-        setPrefWidth(WIDTH);
-        setMinWidth(WIDTH);
-        setMaxWidth(WIDTH);
+        this(model, opener, WIDTH, LEFT_X, RIGHT_X);
+    }
+
+    public SequenceDiagramMessageNode(SequenceDiagramEventViewModel model, Consumer<String> opener,
+                                      double width, double leftX, double rightX) {
+        setPrefWidth(width);
+        setMinWidth(width);
+        setMaxWidth(width);
         setPrefHeight(30);
 
         boolean leftToRight = model.getFrom() == Endpoint.CLIENT;
-        double startX = leftToRight ? LEFT_X : RIGHT_X;
-        double endX = leftToRight ? RIGHT_X : LEFT_X;
+        double startX = leftToRight ? leftX : rightX;
+        double endX = leftToRight ? rightX : leftX;
         Color color = Color.web(model.getColorHex());
 
         Line line = new Line(startX, 17, endX, 17);
@@ -39,20 +44,21 @@ public class SequenceDiagramMessageNode extends Pane {
                 : new Polygon(endX + 8, 12, endX, 17, endX + 8, 22);
         arrow.setFill(color);
 
-        Rectangle bubble = new Rectangle(190, 22);
+        double bubbleWidth = Math.max(140, Math.min(190, Math.abs(rightX - leftX) - 24));
+        Rectangle bubble = new Rectangle(bubbleWidth, 22);
         bubble.setArcWidth(14);
         bubble.setArcHeight(14);
         bubble.setFill(Color.web("#ffffff"));
         bubble.setStroke(color);
         bubble.setStrokeWidth(model.isRetransmitted() ? 2.0 : 1.2);
-        bubble.setLayoutX((LEFT_X + RIGHT_X - 190) / 2);
+        bubble.setLayoutX(((leftX + rightX) - bubbleWidth) / 2);
         bubble.setLayoutY(2);
 
         Label label = new Label(model.getLabel());
         label.setWrapText(true);
         label.setAlignment(Pos.CENTER);
-        label.setPrefWidth(178);
-        label.setMaxWidth(178);
+        label.setPrefWidth(bubbleWidth - 12);
+        label.setMaxWidth(bubbleWidth - 12);
         label.setLayoutX(bubble.getLayoutX() + 6);
         label.setLayoutY(5);
         label.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #203246;");

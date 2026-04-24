@@ -1,35 +1,77 @@
-# Simulador TCP/UDP con JavaFX
+# Simulador visual de TCP y UDP
 
-Aplicación educativa para visualizar TCP y UDP de forma didáctica: handshake, fragmentación, pérdidas, retransmisión, ACK, estados de cliente/servidor y cierre de conexión.
+Aplicación educativa de escritorio para aprender y enseñar cómo funcionan TCP, UDP, la comparación entre ambos protocolos y los modelos de capas TCP/IP y OSI.
 
-## Características
+El proyecto está desarrollado con Java 17, JavaFX y Maven. Es un proyecto open source creado por **Raül de Arriba**.
 
-- **TCP completo para clase**
-  - 3-way handshake (`SYN -> SYN-ACK -> ACK`)
-  - Fragmentación por tamaño configurable (1, 2, 3... caracteres por segmento)
-  - ACK por segmento
-  - Pérdida y retransmisión por timeout
-  - Cierre de conexión (`FIN -> ACK -> FIN -> ACK`)
-- **UDP visual**
-  - Datagramas con numeración
-  - Pérdida sin retransmisión
-  - Reconstrucción parcial del mensaje
-- **Interfaz docente**
-  - Paquetes tipo tarjeta con color por protocolo/estado
-  - Buzón visual de paquetes para cliente y servidor (no desaparecen)
-  - Navegación de simulación paso a paso (`Paso <-` / `Paso ->`)
-  - Panel de detalle del paquete seleccionado
-  - Log de eventos con prefijos (`[SEND]`, `[ACK]`, `[LOST]`, `[RETRY]`, `[STATE]`)
-  - Control de tamaño de ventana (manual + presets)
-  - Inicio por defecto maximizado (pantalla completa de ventana)
+## Qué incluye
+
+- Simulación visual de TCP.
+- Simulación visual de UDP.
+- Comparador TCP vs UDP usando el mismo mensaje y las mismas condiciones de red.
+- Vista de diagrama temporal para seguir el intercambio de paquetes.
+- Vista de paquetes para observar cliente, red y servidor.
+- Modelo TCP/IP y modelo OSI con equivalencias visuales.
+- Vista de encapsulación por capas.
+- Paneles de teoría y ayuda contextual.
+- Logs de eventos por protocolo.
+- Revisión paso a paso de simulaciones.
+- Empaquetado para Linux y Windows.
+
+## Funcionalidades actuales
+
+### TCP
+
+- Handshake de tres pasos: `SYN`, `SYN-ACK`, `ACK`.
+- Estados de conexión del cliente y servidor.
+- Fragmentación del mensaje por tamaño configurable.
+- ACK por segmento.
+- Pérdida de paquetes.
+- Retransmisión por timeout.
+- Control visual de entrega.
+- Cierre de conexión con `FIN` y `ACK`.
+- Paneles de ventana deslizante, congestión, mensajes y eventos.
+
+### UDP
+
+- Envío de datagramas sin conexión.
+- Datagramas numerados.
+- Pérdida sin retransmisión.
+- Reconstrucción parcial del mensaje recibido.
+- Visualización clara de la diferencia entre rapidez/simplicidad y fiabilidad.
+
+### Comparador TCP vs UDP
+
+- Ejecuta TCP y UDP en paralelo.
+- Usa el mismo mensaje para ambos protocolos.
+- Aplica las mismas condiciones de red.
+- Muestra diferencias en entrega, pérdidas, retransmisiones y eventos.
+- Incluye vista temporal y vista de paquetes.
+- Resume los resultados de ambos protocolos.
+
+### Modelos TCP/IP y OSI
+
+- Comparación visual entre el modelo TCP/IP y el modelo OSI.
+- Capas con colores, iconos y descripción.
+- Equivalencias entre capas.
+- Tabla de PDU por modelo.
+- Detalle por capa.
+- Flujo de encapsulación con TCP o UDP.
 
 ## Requisitos
 
-- **JDK 17+** (no solo JRE)
-- **Maven 3.9+**
-- Para generar instaladores: `jpackage` (viene con JDK moderno)
+Para ejecutar desde código fuente:
 
-Verifica:
+- JDK 17 o superior.
+- Maven 3.9 o superior.
+
+Para generar instaladores:
+
+- JDK completo con `jpackage`.
+- En Linux, herramientas estándar de empaquetado `.deb`.
+- En Windows, PowerShell y JDK con `jpackage`.
+
+Comprueba tu entorno:
 
 ```bash
 java -version
@@ -37,53 +79,68 @@ mvn -version
 jpackage --version
 ```
 
+## Instalación para usuarios
+
+### Linux usando `.deb`
+
+Descarga el paquete `.deb` de la versión que quieras instalar y ejecuta:
+
+```bash
+sudo apt install ./tcp-udp-simulator_<version>-1_amd64.deb
+```
+
+Si ya tienes una versión anterior instalada, instalar un `.deb` con una versión superior actualiza la aplicación.
+
+### Linux usando app-image
+
+Descarga la carpeta `TCP-UDP-Simulator` generada como app-image y ejecuta:
+
+```bash
+./TCP-UDP-Simulator/bin/TCP-UDP-Simulator
+```
+
+La app-image es portable. No actualiza una instalación anterior automáticamente; cada versión puede vivir en su propia carpeta.
+
+### Windows usando `.exe`
+
+Descarga el instalador `.exe` de la versión deseada y ejecútalo.
+
+Si ya existe una versión anterior instalada, el instalador nuevo actualiza la aplicación siempre que mantenga el mismo identificador de actualización configurado en el script de empaquetado.
+
 ## Ejecutar en desarrollo
+
+Clona el repositorio y entra en la carpeta del proyecto:
+
+```bash
+git clone <URL_DEL_REPOSITORIO>
+cd network_simulator
+```
+
+Ejecuta la aplicación:
 
 ```bash
 mvn clean javafx:run
 ```
 
-La app abre por defecto maximizada. Si quieres un tamaño concreto, usa los controles de `Ancho`, `Alto`, `Preset ventana` y `Aplicar tamaño`.
-
-## Icono de la app
-
-- El proyecto incluye **ambos formatos**:
-  - `icono.png` (ejecución JavaFX y empaquetado Linux)
-  - `icono.ico` (instalador Windows)
-- Si quieres regenerar el `.ico` desde el `.png`:
+Ejecuta los tests:
 
 ```bash
-convert icono.png -define icon:auto-resize=256,128,64,48,32,16 icono.ico
+mvn test
 ```
 
-## Controles de la interfaz
+## Crear instaladores
 
-- `Protocolo`: TCP o UDP
-- `Mensaje`: texto a enviar
-- `Pérdida (%)`: probabilidad de pérdida simulada
-- `Velocidad`: factor de velocidad de animación
-- `Fragmento (1,2,3...)`: tamaño del segmento TCP / datagrama UDP
-- `Ancho` y `Alto ventana`: tamaño manual
-- `Preset ventana`: resoluciones rápidas
-- Al terminar la simulación aparece el bloque `Revisión`:
-  - `|<`: ir al primer paso
-  - `Paso <-`: retroceder un paso
-  - `Paso ->`: avanzar un paso
-  - `>|`: ir al último paso
+La versión principal se toma de `<version>` en `pom.xml`.
 
-## Organización de artefactos
+Para preparar una nueva versión:
 
-Estructura recomendada (ya creada):
+```bash
+mvn versions:set -DnewVersion=1.0.1
+```
 
-- `artifacts/linux/app-image/`
-- `artifacts/linux/deb/`
-- `artifacts/windows/exe/`
-- `scripts/package-linux.sh`
-- `scripts/package-windows.ps1`
+### Linux
 
-## Generar instaladores
-
-### Linux (.deb y app-image)
+Genera `.deb` y app-image:
 
 ```bash
 ./scripts/package-linux.sh
@@ -91,10 +148,16 @@ Estructura recomendada (ya creada):
 
 Salida:
 
-- `artifacts/linux/app-image/`
-- `artifacts/linux/deb/`
+- `artifacts/linux/<version>/deb/`
+- `artifacts/linux/<version>/app-image/`
 
-### Windows (.exe)
+También puedes indicar una versión concreta para el instalador:
+
+```bash
+./scripts/package-linux.sh 1.0.1
+```
+
+### Windows
 
 En PowerShell:
 
@@ -104,68 +167,111 @@ En PowerShell:
 
 Salida:
 
-- `artifacts/windows/exe/`
+- `artifacts/windows/<version>/exe/`
 
-> Nota: el script usa `icono.ico` para Windows.
+También puedes indicar una versión concreta:
 
-## Subir paquetes a GitHub (Release)
-
-La forma más práctica para binarios de escritorio es **GitHub Releases** (no guardar `.deb/.exe` dentro del repo en git normal).
-
-### Opción con `gh` CLI
-
-1. Crea un tag:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
+```powershell
+.\scripts\package-windows.ps1 1.0.1
 ```
 
-2. Publica release con artefactos:
+Importante: no cambies el `--win-upgrade-uuid` del script entre versiones. Ese valor permite que Windows reconozca una versión nueva como actualización de la aplicación instalada.
+
+## Versionado
+
+El proyecto usa versionado semántico:
+
+- `MAJOR`: cambios incompatibles o rediseños grandes.
+- `MINOR`: nuevas funcionalidades.
+- `PATCH`: correcciones y mejoras pequeñas.
+
+Ejemplos:
+
+- `1.0.0`: primera versión estable.
+- `1.1.0`: nuevas vistas o funcionalidades.
+- `1.1.1`: correcciones visuales o de bugs.
+
+Para publicar una versión:
 
 ```bash
-gh release create v1.0.0 \
-  artifacts/linux/deb/*.deb \
-  artifacts/linux/app-image/** \
-  artifacts/windows/exe/*.exe \
-  --title "v1.0.0" \
-  --notes "Primera versión pública del simulador TCP/UDP"
+git tag v1.0.1
+git push origin v1.0.1
 ```
 
-### Opción manual (web)
+Después puedes subir los artefactos generados a GitHub Releases.
 
-1. Ve a `GitHub -> Releases -> Draft a new release`
-2. Selecciona el tag.
-3. Arrastra los archivos de:
-   - `artifacts/linux/deb/`
-   - `artifacts/windows/exe/`
-   - (opcional) carpeta/zip de `app-image`
-4. Publica la release.
+## Estructura del proyecto
 
-## GitHub Packages (Maven package)
+```text
+src/main/java/com/example/simulator/
+  app/                  Arranque e integración de la aplicación JavaFX
+  application/          Casos de uso y servicios de aplicación
+  domain/               Modelo de dominio y motor de simulación
+  infrastructure/       Repositorios y carga de contenido JSON
+  presentation/         ViewModels y adaptadores para UI
+  ui/                   Componentes JavaFX
 
-Si también quieres publicar el JAR como paquete Maven en GitHub Packages:
+src/main/resources/
+  content/              Teoría y escenarios
+  icons/                Iconos usados por la interfaz
 
-1. Configura `distributionManagement` en `pom.xml` apuntando a `https://maven.pkg.github.com/<OWNER>/<REPO>`
-2. Configura credenciales en `~/.m2/settings.xml` con un token de GitHub (`write:packages`)
-3. Publica con:
+html/
+  comparador/           Boceto HTML/CSS del comparador TCP vs UDP
+  modelos/              Boceto HTML/CSS de modelos TCP/IP y OSI
+
+scripts/
+  package-linux.sh      Empaquetado Linux
+  package-windows.ps1   Empaquetado Windows
+```
+
+## Colaborar
+
+Las contribuciones son bienvenidas. Puedes colaborar corrigiendo bugs, mejorando la interfaz, añadiendo escenarios, ampliando teoría o escribiendo tests.
+
+Flujo recomendado:
+
+1. Haz un fork del repositorio.
+2. Crea una rama descriptiva:
 
 ```bash
-mvn deploy
+git checkout -b mejora/nueva-vista
 ```
 
-Para instaladores de escritorio (`.deb`, `.exe`), sigue usando Releases.
+3. Realiza los cambios.
+4. Ejecuta los tests:
 
-## Solución de problemas rápida
+```bash
+mvn test
+```
 
-- **No abre JavaFX**: confirma JDK 17+ y vuelve a ejecutar `mvn clean javafx:run`.
-- **No encuentra `jpackage`**: instala/usa JDK completo y agrega `bin` al `PATH`.
-- **Instalador sin icono en Windows**: usa `.ico` en lugar de `.png`.
-- **Dependencias faltantes al empaquetar**: repite el paso de `dependency:copy-dependencies`.
+5. Abre un pull request explicando:
+
+- Qué cambia.
+- Por qué se cambia.
+- Cómo se ha probado.
+- Capturas si el cambio afecta a la interfaz.
+
+## Buenas prácticas para contribuir
+
+- Mantén los cambios acotados.
+- No mezcles refactors grandes con cambios funcionales.
+- Añade o actualiza tests cuando cambie lógica de simulación.
+- Si modificas UI, intenta respetar los bocetos de `html/`.
+- No subas instaladores generados al repositorio; usa Releases para publicarlos.
 
 ## Uso recomendado en clase
 
-1. TCP con fragmento `1` o `2` para mostrar secuencia exacta de segmentos.
-2. Sube pérdida (30-40%) para observar retransmisiones y ACK.
-3. Repite con UDP para contrastar ausencia de recuperación.
-4. Enseña estado de conexión: `SYN_*`, `ESTABLISHED`, cierre con `FIN/ACK`.
+1. Empieza con TCP sin pérdidas para explicar conexión, ACK y cierre.
+2. Reduce el tamaño de fragmento para ver más segmentos.
+3. Sube la pérdida al 30-40% para enseñar retransmisiones.
+4. Repite el escenario con UDP.
+5. Usa el comparador TCP vs UDP para discutir fiabilidad frente a simplicidad.
+6. Cierra con el modelo TCP/IP y OSI para ubicar TCP, UDP, IP y Ethernet en sus capas.
+
+## Autor
+
+Creado por **Raül de Arriba**.
+
+## Licencia
+
+Proyecto open source. Añade un archivo `LICENSE` al repositorio para declarar formalmente la licencia de uso y distribución.

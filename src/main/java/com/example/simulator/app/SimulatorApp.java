@@ -681,10 +681,12 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             bottomControlBar.setManaged(!useEmbeddedTcpBar);
         }
         if (appHeader != null) {
-            boolean useEmbeddedTcpBar = currentScreen == WorkspaceScreen.TCP
-                    || currentScreen == WorkspaceScreen.UDP;
-            appHeader.setVisible(!useEmbeddedTcpBar);
-            appHeader.setManaged(!useEmbeddedTcpBar);
+            boolean compactWorkspace = currentScreen == WorkspaceScreen.TCP
+                    || currentScreen == WorkspaceScreen.UDP
+                    || currentScreen == WorkspaceScreen.COMPARE
+                    || currentScreen == WorkspaceScreen.LAYERS;
+            appHeader.setVisible(!compactWorkspace);
+            appHeader.setManaged(!compactWorkspace);
         }
         updateWorkspaceToolbar();
         updateBottomBarForScreen();
@@ -698,7 +700,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 || currentScreen == WorkspaceScreen.UDP
                 || currentScreen == WorkspaceScreen.COMPARE;
         boolean embeddedTcpLayout = currentScreen == WorkspaceScreen.TCP
-                || currentScreen == WorkspaceScreen.UDP;
+                || currentScreen == WorkspaceScreen.UDP
+                || currentScreen == WorkspaceScreen.LAYERS;
         if (workspaceIntroCard != null) {
             workspaceIntroCard.setVisible(!embeddedTcpLayout);
             workspaceIntroCard.setManaged(!embeddedTcpLayout);
@@ -715,9 +718,18 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         if (bottomControlBar == null) {
             return;
         }
+        boolean layersWorkspace = currentScreen == WorkspaceScreen.LAYERS;
         boolean simulationWorkspace = currentScreen == WorkspaceScreen.TCP
                 || currentScreen == WorkspaceScreen.UDP
                 || currentScreen == WorkspaceScreen.COMPARE;
+        bottomControlBar.getRunButton().setVisible(!layersWorkspace);
+        bottomControlBar.getRunButton().setManaged(!layersWorkspace);
+        bottomControlBar.getPlayPauseButton().setVisible(!layersWorkspace);
+        bottomControlBar.getPlayPauseButton().setManaged(!layersWorkspace);
+        bottomControlBar.getStepButton().setVisible(!layersWorkspace);
+        bottomControlBar.getStepButton().setManaged(!layersWorkspace);
+        bottomControlBar.getResetButton().setVisible(!layersWorkspace);
+        bottomControlBar.getResetButton().setManaged(!layersWorkspace);
         bottomControlBar.getRunButton().setDisable(!simulationWorkspace);
         bottomControlBar.getPlayPauseButton().setDisable(!simulationWorkspace);
         bottomControlBar.getStepButton().setDisable(!simulationWorkspace);
@@ -726,8 +738,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         bottomControlBar.getReviewStepBackButton().setDisable(!simulationWorkspace);
         bottomControlBar.getReviewStepForwardButton().setDisable(!simulationWorkspace);
         bottomControlBar.getReviewLastButton().setDisable(!simulationWorkspace);
-        bottomControlBar.getReviewBox().setManaged(simulationWorkspace && !uiSnapshots.isEmpty());
-        bottomControlBar.getReviewBox().setVisible(simulationWorkspace && !uiSnapshots.isEmpty());
+        bottomControlBar.getReviewBox().setManaged(!layersWorkspace && simulationWorkspace && !uiSnapshots.isEmpty());
+        bottomControlBar.getReviewBox().setVisible(!layersWorkspace && simulationWorkspace && !uiSnapshots.isEmpty());
     }
 
     private void openConfigurationModal() {

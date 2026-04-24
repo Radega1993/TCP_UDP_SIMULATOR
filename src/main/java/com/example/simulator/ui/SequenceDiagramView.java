@@ -15,9 +15,9 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 public class SequenceDiagramView extends VBox {
-    private static final double WIDTH = 560;
-    private static final double LEFT_X = 110;
-    private static final double RIGHT_X = 430;
+    private static final double DEFAULT_WIDTH = 560;
+    private static final double DEFAULT_LEFT_X = 110;
+    private static final double DEFAULT_RIGHT_X = 430;
     private static final double VIEWPORT_HEIGHT = 390;
     private static final double EVENT_TOP = 12;
     private static final double EVENT_GAP = 31;
@@ -25,23 +25,34 @@ public class SequenceDiagramView extends VBox {
     private final ScrollPane scrollPane = new ScrollPane(contentPane);
     private final Map<String, SequenceDiagramEventViewModel> events = new LinkedHashMap<>();
     private final Consumer<String> detailsOpener;
+    private final double width;
+    private final double leftX;
+    private final double rightX;
     private double viewportHeight = VIEWPORT_HEIGHT;
 
     public SequenceDiagramView(String title, Consumer<String> detailsOpener) {
+        this(title, detailsOpener, DEFAULT_WIDTH, DEFAULT_LEFT_X, DEFAULT_RIGHT_X);
+    }
+
+    public SequenceDiagramView(String title, Consumer<String> detailsOpener,
+                               double width, double leftX, double rightX) {
         this.detailsOpener = detailsOpener;
+        this.width = width;
+        this.leftX = leftX;
+        this.rightX = rightX;
         setSpacing(8);
         setPadding(new Insets(6, 0, 0, 0));
         setAlignment(Pos.TOP_CENTER);
         setStyle("-fx-background-color: transparent;");
         setViewportHeight(VIEWPORT_HEIGHT);
 
-        HBoxLike header = new HBoxLike();
-        header.addCentered(new LifelineHeader("Cliente"), LEFT_X, 96);
-        header.addCentered(new LifelineHeader("Servidor"), RIGHT_X, 104);
+        HBoxLike header = new HBoxLike(width);
+        header.addCentered(new LifelineHeader("Cliente"), leftX, 96);
+        header.addCentered(new LifelineHeader("Servidor"), rightX, 104);
 
-        contentPane.setPrefWidth(WIDTH);
-        contentPane.setMinWidth(WIDTH);
-        contentPane.setMaxWidth(WIDTH);
+        contentPane.setPrefWidth(width);
+        contentPane.setMinWidth(width);
+        contentPane.setMaxWidth(width);
         contentPane.setPrefHeight(viewportHeight);
         contentPane.setMinHeight(viewportHeight);
         contentPane.setStyle("-fx-background-color: #fbfdff;");
@@ -50,10 +61,10 @@ public class SequenceDiagramView extends VBox {
         scrollPane.setFitToHeight(false);
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scrollPane.setMinWidth(WIDTH);
-        scrollPane.setPrefWidth(WIDTH);
-        scrollPane.setMaxWidth(WIDTH);
-        scrollPane.setPrefViewportWidth(WIDTH);
+        scrollPane.setMinWidth(width);
+        scrollPane.setPrefWidth(width);
+        scrollPane.setMaxWidth(width);
+        scrollPane.setPrefViewportWidth(width);
         scrollPane.setPrefViewportHeight(viewportHeight);
         scrollPane.setMinViewportHeight(viewportHeight);
         scrollPane.setMaxHeight(viewportHeight);
@@ -61,9 +72,9 @@ public class SequenceDiagramView extends VBox {
 
         VBox diagramBody = new VBox(0, header, scrollPane);
         diagramBody.setAlignment(Pos.TOP_CENTER);
-        diagramBody.setMinWidth(WIDTH);
-        diagramBody.setPrefWidth(WIDTH);
-        diagramBody.setMaxWidth(WIDTH);
+        diagramBody.setMinWidth(width);
+        diagramBody.setPrefWidth(width);
+        diagramBody.setMaxWidth(width);
 
         getChildren().add(diagramBody);
         redraw();
@@ -129,17 +140,17 @@ public class SequenceDiagramView extends VBox {
         contentPane.setPrefHeight(totalHeight);
         contentPane.setMinHeight(totalHeight);
 
-        Line leftLine = new Line(LEFT_X, 8, LEFT_X, totalHeight - 12);
+        Line leftLine = new Line(leftX, 8, leftX, totalHeight - 12);
         leftLine.setStroke(Color.web("#cfd9e5"));
         leftLine.getStrokeDashArray().addAll(7.0, 6.0);
-        Line rightLine = new Line(RIGHT_X, 8, RIGHT_X, totalHeight - 12);
+        Line rightLine = new Line(rightX, 8, rightX, totalHeight - 12);
         rightLine.setStroke(Color.web("#cfd9e5"));
         rightLine.getStrokeDashArray().addAll(7.0, 6.0);
         contentPane.getChildren().addAll(leftLine, rightLine);
 
         int index = 0;
         for (SequenceDiagramEventViewModel model : events.values()) {
-            SequenceDiagramMessageNode node = new SequenceDiagramMessageNode(model, detailsOpener);
+            SequenceDiagramMessageNode node = new SequenceDiagramMessageNode(model, detailsOpener, width, leftX, rightX);
             node.setLayoutX(0);
             node.setLayoutY(EVENT_TOP + (index * EVENT_GAP));
             contentPane.getChildren().add(node);
@@ -155,10 +166,10 @@ public class SequenceDiagramView extends VBox {
     }
 
     private static class HBoxLike extends Pane {
-        private HBoxLike() {
-            setPrefWidth(WIDTH);
-            setMinWidth(WIDTH);
-            setMaxWidth(WIDTH);
+        private HBoxLike(double width) {
+            setPrefWidth(width);
+            setMinWidth(width);
+            setMaxWidth(width);
             setPrefHeight(26);
         }
 

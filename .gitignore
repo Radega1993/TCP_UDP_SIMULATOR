@@ -5,6 +5,8 @@
 
 /artifacts/linux/app-image/
 /artifacts/linux/deb/
+/artifacts/linux/*/
 /artifacts/windows/exe/
+/artifacts/windows/*/
 
 *.log

@@ -7,13 +7,17 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
+import java.io.InputStream;
 import java.util.function.Consumer;
 
 public class ComparisonModeView extends VBox {
@@ -123,15 +127,16 @@ public class ComparisonModeView extends VBox {
         DashboardCard comparisonCard = new DashboardCard(null, "Comparación en tiempo real", "Misma entrada, misma red y misma temporización para observar fiabilidad frente a simplicidad.");
         comparisonCard.setStyle(compareCardStyle());
         comparisonCard.setPadding(new Insets(16, 20, 14, 20));
-        comparisonCard.setMinHeight(650);
-        comparisonCard.setPrefHeight(650);
+        comparisonCard.setMinHeight(545);
+        comparisonCard.setPrefHeight(545);
 
         Label info = new Label("TCP mantiene estado, ACK y retransmisiones. UDP envía datagramas sin conexión ni recuperación nativa.");
         info.setWrapText(true);
         info.setStyle("-fx-text-fill: #5f7390; -fx-font-size: 13px;");
 
-        HBox protocolSummary = new HBox(42, protocolBadge("⇄", "TCP", "Confiable", "#2f80ed", "#eaf3ff"),
-                protocolBadge("✈", "UDP", "No confiable", "#8a55e6", "#f1eafe"));
+        HBox protocolSummary = new HBox(54,
+                protocolBadge("/icons/tcp.png", "TCP", "Confiable", "#2f80ed", "#eaf3ff"),
+                protocolBadge("/icons/udp.png", "UDP", "No confiable", "#8a55e6", "#f1eafe"));
         protocolSummary.setAlignment(Pos.CENTER);
 
         HBox lanes = new HBox(14, tcpPane, udpPane);
@@ -160,6 +165,7 @@ public class ComparisonModeView extends VBox {
         metrics.add(metricCard("UDP pérdidas", udpLost, "#ff4d4f"), 5, 0);
         metrics.add(metricCard("UDP retrans.", udpRetrans, "#8a55e6"), 6, 0);
         metrics.add(metricCard("UDP eventos", udpEvents, "#8a55e6"), 7, 0);
+        VBox.setMargin(metrics, new Insets(8, 0, 0, 0));
 
         GridPane charts = new GridPane();
         charts.setHgap(10);
@@ -222,15 +228,34 @@ public class ComparisonModeView extends VBox {
         return new VBox(4, l, v);
     }
 
-    private Node protocolBadge(String icon, String title, String subtitle, String color, String bg) {
-        Label iconLabel = new Label(icon);
-        iconLabel.setAlignment(Pos.CENTER);
-        iconLabel.setStyle("-fx-min-width: 34; -fx-min-height: 34; -fx-background-color: " + bg + "; -fx-background-radius: 999; -fx-text-fill: " + color + "; -fx-font-size: 18px; -fx-font-weight: 900;");
+    private Node protocolBadge(String iconPath, String title, String subtitle, String color, String bg) {
+        StackPane iconBox = new StackPane();
+        iconBox.setMinSize(38, 38);
+        iconBox.setPrefSize(38, 38);
+        iconBox.setMaxSize(38, 38);
+        iconBox.setStyle("-fx-background-color: " + bg + "; -fx-background-radius: 999;");
+        try (InputStream stream = getClass().getResourceAsStream(iconPath)) {
+            if (stream != null) {
+                ImageView icon = new ImageView(new Image(stream));
+                icon.setFitWidth(22);
+                icon.setFitHeight(22);
+                icon.setPreserveRatio(true);
+                iconBox.getChildren().add(icon);
+            } else {
+                Label fallback = new Label(title.substring(0, 1));
+                fallback.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 18px; -fx-font-weight: 900;");
+                iconBox.getChildren().add(fallback);
+            }
+        } catch (Exception ex) {
+            Label fallback = new Label(title.substring(0, 1));
+            fallback.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 18px; -fx-font-weight: 900;");
+            iconBox.getChildren().add(fallback);
+        }
         Label titleLabel = new Label(title);
         titleLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 21px; -fx-font-weight: 900;");
         Label subtitleLabel = new Label(subtitle);
         subtitleLabel.setStyle("-fx-text-fill: #5f7390; -fx-font-size: 12px;");
-        return new HBox(12, iconLabel, new VBox(2, titleLabel, subtitleLabel));
+        return new HBox(12, iconBox, new VBox(2, titleLabel, subtitleLabel));
     }
 
     private Node metricCard(String title, Label value, String accent) {
@@ -292,12 +317,12 @@ public class ComparisonModeView extends VBox {
 
     private void prepareProtocolPane(ComparisonProtocolPane pane) {
         pane.setStyle(compareCardStyle());
-        pane.setMinWidth(330);
-        pane.setPrefWidth(420);
+        pane.setMinWidth(315);
+        pane.setPrefWidth(370);
         pane.setMaxWidth(Double.MAX_VALUE);
-        pane.setMinHeight(480);
-        pane.setPrefHeight(480);
-        pane.setMaxHeight(480);
+        pane.setMinHeight(374);
+        pane.setPrefHeight(374);
+        pane.setMaxHeight(374);
     }
 
     private void updateMetricLabels(ComparisonSummary summary) {
