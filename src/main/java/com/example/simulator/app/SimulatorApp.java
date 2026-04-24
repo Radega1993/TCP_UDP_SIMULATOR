@@ -25,11 +25,15 @@ import com.example.simulator.ui.CongestionPanel;
 import com.example.simulator.ui.ControlPanel;
 import com.example.simulator.ui.DashboardCard;
 import com.example.simulator.ui.EventLogPanel;
+import com.example.simulator.ui.HomeFooterHint;
+import com.example.simulator.ui.HomeHeroHeader;
+import com.example.simulator.ui.HomeModeCard;
+import com.example.simulator.ui.LayersLearningView;
 import com.example.simulator.ui.MailboxPanel;
 import com.example.simulator.ui.MessageSummaryPanel;
-import com.example.simulator.ui.ModeLaunchCard;
 import com.example.simulator.ui.NetworkCanvas;
 import com.example.simulator.ui.PacketNode;
+import com.example.simulator.ui.QuickAccessChip;
 import com.example.simulator.ui.SequenceDiagramView;
 import com.example.simulator.ui.SimulationViewMode;
 import com.example.simulator.ui.SimulatorHeader;
@@ -91,6 +95,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     private StackPane appContentStack;
     private Node homeView;
     private Node simpleModeView;
+    private Node layersModeView;
     private StackPane modeContentStack;
     private ComboBox<SimulationMode> modeSelector;
     private ComboBox<ProtocolType> protocolSelector;
@@ -145,17 +150,22 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     private SlidingWindowPanel slidingWindowPanel;
     private CongestionPanel congestionPanel;
     private ViewModeToggle viewModeToggle;
+    private StyledButton workspaceConfigButton;
+    private FlowPane workspaceLegendPane;
     private SimulationViewMode currentViewMode = SimulationViewMode.DIAGRAM;
     private FlowControlSnapshot latestFlowControlSnapshot;
     private CongestionSnapshot latestCongestionSnapshot;
     private final List<CwndHistoryPoint> congestionHistory = new ArrayList<>();
     private WorkspaceScreen currentScreen = WorkspaceScreen.HOME;
+    private LayersLearningView layersLearningView;
+    private Packet lastInspectablePacket;
 
     private enum WorkspaceScreen {
         HOME,
         TCP,
         UDP,
-        COMPARE
+        COMPARE,
+        LAYERS
     }
 
     @Override
@@ -250,32 +260,228 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     }
 
     private Node buildHomeView() {
-        DashboardCard intro = new DashboardCard("INICIO", "Elige una experiencia de simulación",
-                "Accede directamente al modo TCP, al modo UDP o a la comparación paralela entre ambos.");
-        intro.setStyle(UiTheme.HERO_CARD);
+        HomeHeroHeader headerCard = new HomeHeroHeader(buildHomeHeaderActions());
 
-        ModeLaunchCard tcpCard = new ModeLaunchCard("PROTOCOLO", "TCP",
+        DashboardCard introCard = new DashboardCard("INICIO", "Elige una experiencia de simulación",
+                "Accede directamente al modo TCP, al modo UDP o a la comparación paralela entre ambos.");
+        introCard.setPadding(new Insets(16, 18, 16, 18));
+        introCard.setStyle("-fx-background-color: #ffffff;"
+                + "-fx-background-radius: 18;"
+                + "-fx-border-radius: 18;"
+                + "-fx-border-color: #d9e2ec;"
+                + "-fx-effect: dropshadow(gaussian, rgba(15,23,42,0.06), 18, 0.18, 0, 6);");
+        introCard.setContent(buildHomeIntroContent());
+
+        HomeModeCard tcpCard = new HomeModeCard(
+                "PROTOCOLO",
+                "TCP",
                 "Explora handshake, ACK, retransmisión y cierre con una vista centrada en fiabilidad.",
-                "Ideal para explicar conexión previa, confirmaciones y recuperación de pérdidas.");
+                "Ideal para explicar conexión previa, confirmaciones y recuperación de pérdidas.",
+                "/icons/tcp.png",
+                "<>",
+                "#4F8EF7",
+                "#60a5fa",
+                false
+        );
         tcpCard.setOnMouseClicked(event -> openSimpleWorkspace(ProtocolType.TCP));
 
-        ModeLaunchCard udpCard = new ModeLaunchCard("PROTOCOLO", "UDP",
+        HomeModeCard udpCard = new HomeModeCard(
+                "PROTOCOLO",
+                "UDP",
                 "Observa datagramas, pérdidas y simplicidad de envío sin conexión ni ACK.",
-                "Ideal para explicar baja sobrecarga, rapidez y ausencia de recuperación nativa.");
+                "Ideal para explicar baja sobrecarga, rapidez y ausencia de recuperación nativa.",
+                "/icons/udp.png",
+                ">>",
+                "#8A63D2",
+                "#b794f4",
+                false
+        );
         udpCard.setOnMouseClicked(event -> openSimpleWorkspace(ProtocolType.UDP));
 
-        ModeLaunchCard comparisonCard = new ModeLaunchCard("COMPARACIÓN", "TCP vs UDP",
+        HomeModeCard comparisonCard = new HomeModeCard(
+                "COMPARACIÓN",
+                "TCP vs UDP",
                 "Lanza ambos protocolos en paralelo con la misma red y el mismo mensaje.",
-                "Ideal para ver en una sola demo la diferencia entre fiabilidad y simplicidad.");
+                "Ideal para ver en una sola demo la diferencia entre fiabilidad y simplicidad.",
+                "/icons/compare.png",
+                "<|>",
+                "#4F8EF7",
+                "#8A63D2",
+                true
+        );
         comparisonCard.setOnMouseClicked(event -> openComparisonWorkspace());
 
-        FlowPane cards = new FlowPane(22, 22, tcpCard, udpCard, comparisonCard);
-        cards.setAlignment(Pos.TOP_LEFT);
-        cards.setPrefWrapLength(1300);
+        HomeModeCard layersCard = new HomeModeCard(
+                "CAPAS",
+                "Ver modelo TCP/IP y OSI",
+                "Explora capas, encapsulación, cabeceras simplificadas y equivalencias entre modelos.",
+                "Ideal para conectar lo que ves en la simulación con la arquitectura completa de red.",
+                "/icons/layers.png",
+                "[#]",
+                "#F08A24",
+                "#f6ad55",
+                false
+        );
+        layersCard.setOnMouseClicked(event -> openLayersWorkspace());
 
-        VBox home = new VBox(22, intro, cards);
+        GridPane cards = new GridPane();
+        cards.setHgap(20);
+        cards.setVgap(20);
+        for (int column = 0; column < 4; column++) {
+            ColumnConstraints columnConstraints = new ColumnConstraints();
+            columnConstraints.setPercentWidth(25);
+            columnConstraints.setHgrow(Priority.ALWAYS);
+            columnConstraints.setFillWidth(true);
+            cards.getColumnConstraints().add(columnConstraints);
+        }
+        cards.add(tcpCard, 0, 0);
+        cards.add(udpCard, 1, 0);
+        cards.add(comparisonCard, 2, 0);
+        cards.add(layersCard, 3, 0);
+        for (Node card : List.of(comparisonCard, tcpCard, udpCard, layersCard)) {
+            GridPane.setHgrow(card, Priority.ALWAYS);
+            GridPane.setFillWidth(card, true);
+        }
+
+        DashboardCard quickAccess = new DashboardCard("ACCESOS DIRECTOS", "Escenarios rápidos",
+                "Lanza ejemplos frecuentes para clase sin pasar por toda la configuración.");
+        quickAccess.setPadding(new Insets(16, 18, 18, 18));
+        quickAccess.setContent(buildQuickAccessPanel());
+
+        HomeFooterHint footerHint = new HomeFooterHint(
+                "Consejo didáctico",
+                "Ejecuta la misma palabra en TCP y UDP con una pérdida del 30–40% para comparar fiabilidad y simplicidad en una sola demostración.",
+                "Escenarios cargados: " + scenarios.size() + "   •   Vista por defecto: Diagrama   •   Modo destacado: TCP vs UDP"
+        );
+
+        VBox home = new VBox(20, headerCard, introCard, cards, quickAccess, footerHint);
         home.setPadding(new Insets(0, 0, 18, 0));
         return home;
+    }
+
+    private Label headerMetric(String text, String accent) {
+        Label label = new Label(text);
+        label.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: " + accent + ";"
+                + "-fx-background-color: #f6f9fd;"
+                + "-fx-background-radius: 999;"
+                + "-fx-border-radius: 999;"
+                + "-fx-border-color: #dce6ef;"
+                + "-fx-padding: 7 10 7 10;");
+        return label;
+    }
+
+    private Node buildHomeHeaderActions() {
+        StyledButton helpButton = new StyledButton("Ayuda", StyledButton.Kind.TERTIARY);
+        helpButton.setOnAction(event -> openTextModal(
+                "Ayuda de inicio",
+                "Guía rápida para orientarte en la portada del simulador.",
+                """
+                        TCP: explica conexión, ACK y retransmisión.
+                        UDP: explica datagramas, pérdidas y baja sobrecarga.
+                        TCP vs UDP: compara ambos protocolos con la misma red.
+                        Modelo TCP/IP y OSI: conecta la simulación con la teoría de capas.
+                        """,
+                false
+        ));
+
+        StyledButton lastModeButton = new StyledButton("Última simulación", StyledButton.Kind.TERTIARY);
+        lastModeButton.setOnAction(event -> {
+            if (currentScreen == WorkspaceScreen.TCP) {
+                openSimpleWorkspace(ProtocolType.TCP);
+            } else if (currentScreen == WorkspaceScreen.UDP) {
+                openSimpleWorkspace(ProtocolType.UDP);
+            } else if (currentScreen == WorkspaceScreen.COMPARE) {
+                openComparisonWorkspace();
+            } else if (currentScreen == WorkspaceScreen.LAYERS) {
+                openLayersWorkspace();
+            } else {
+                openComparisonWorkspace();
+            }
+        });
+
+        StyledButton aboutButton = new StyledButton("Acerca de", StyledButton.Kind.TERTIARY);
+        aboutButton.setOnAction(event -> openTextModal(
+                "Acerca de",
+                "Resumen del producto.",
+                """
+                        Herramienta educativa de escritorio para explicar TCP, UDP, comparación entre protocolos,
+                        congestión, control de flujo, capas, encapsulación y estructura de paquetes.
+                        """,
+                false
+        ));
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox row = new HBox(10, spacer, helpButton, lastModeButton, aboutButton);
+        row.setAlignment(Pos.CENTER_RIGHT);
+        return row;
+    }
+
+    private Node buildHomeIntroContent() {
+        Label body = new Label("Selecciona un modo principal o entra por un escenario rápido. La comparación entre TCP y UDP está pensada como demo central para clase.");
+        body.setWrapText(true);
+        body.setStyle("-fx-font-size: 13px; -fx-text-fill: #486581;");
+
+        HBox steps = new HBox(10,
+                headerMetric("1. Elige protocolo", "#4F8EF7"),
+                headerMetric("2. Ajusta escenario", "#5BAA4A"),
+                headerMetric("3. Explica resultados", "#8A63D2")
+        );
+        steps.setAlignment(Pos.CENTER_LEFT);
+        return new VBox(10, body, steps);
+    }
+
+    private Node buildQuickAccessPanel() {
+        FlowPane row = new FlowPane(12, 12);
+        row.setPrefWrapLength(1220);
+
+        QuickAccessChip handshake = new QuickAccessChip("[]", "Handshake TCP", "#4F8EF7", "/icons/tcp.png");
+        handshake.setOnMouseClicked(event -> openScenarioShortcut("tcp-handshake", SimulationMode.SIMPLE));
+
+        QuickAccessChip retransmission = new QuickAccessChip("!!", "Pérdida y retransmisión", "#4F8EF7", "/icons/tcp.png");
+        retransmission.setOnMouseClicked(event -> openScenarioShortcut("tcp-congestion-timeout", SimulationMode.SIMPLE));
+
+        QuickAccessChip udpBasic = new QuickAccessChip(">>", "UDP básico", "#8A63D2", "/icons/udp.png");
+        udpBasic.setOnMouseClicked(event -> openScenarioShortcut("udp-basic", SimulationMode.SIMPLE));
+
+        QuickAccessChip comparison = new QuickAccessChip("<|>", "Comparación TCP vs UDP", "#4F8EF7", "/icons/compare.png");
+        comparison.setOnMouseClicked(event -> openScenarioShortcut("tcp-handshake", SimulationMode.COMPARE));
+
+        QuickAccessChip window = new QuickAccessChip("<>", "Ventana deslizante", "#5BAA4A", "/icons/tcp.png");
+        window.setOnMouseClicked(event -> openScenarioShortcut("tcp-congestion-growth", SimulationMode.SIMPLE));
+
+        QuickAccessChip congestion = new QuickAccessChip("^^", "Congestión TCP", "#F08A24", "/icons/tcp.png");
+        congestion.setOnMouseClicked(event -> openScenarioShortcut("tcp-congestion-duplicate-ack", SimulationMode.SIMPLE));
+
+        QuickAccessChip layers = new QuickAccessChip("[#]", "Modelo OSI / TCP-IP", "#F08A24", "/icons/layers.png");
+        layers.setOnMouseClicked(event -> openLayersWorkspace());
+
+        row.getChildren().addAll(handshake, retransmission, udpBasic, comparison, window, congestion, layers);
+        return row;
+    }
+
+    private void openScenarioShortcut(String scenarioId, SimulationMode mode) {
+        Scenario scenario = findScenarioById(scenarioId);
+        if (scenario == null) {
+            return;
+        }
+        scenarioSelector.setValue(scenario);
+        applyScenarioSelection(scenario);
+        modeSelector.setValue(mode);
+        if (mode == SimulationMode.COMPARE) {
+            openComparisonWorkspace();
+        } else {
+            openSimpleWorkspace(scenario.getProtocol());
+        }
+    }
+
+    private Scenario findScenarioById(String scenarioId) {
+        for (Scenario scenario : scenarios) {
+            if (scenario.getId().equals(scenarioId)) {
+                return scenario;
+            }
+        }
+        return null;
     }
 
     private VBox buildWorkspaceContent() {
@@ -286,11 +492,20 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 details,
                 true
         ));
+        layersLearningView = new LayersLearningView(details -> openTextModal(
+                "Estructura interna del paquete",
+                "Vista didáctica de encapsulación y cabeceras simplificadas.",
+                details,
+                true
+        ));
+        layersModeView = layersLearningView;
         comparisonModeView.setVisible(false);
         comparisonModeView.setManaged(false);
         comparisonModeView.setViewMode(currentViewMode);
+        layersModeView.setVisible(false);
+        layersModeView.setManaged(false);
 
-        modeContentStack = new StackPane(simpleModeView, comparisonModeView);
+        modeContentStack = new StackPane(simpleModeView, comparisonModeView, layersModeView);
         DashboardCard workspaceIntro = new DashboardCard("ESPACIO DE TRABAJO", "Simulación activa",
                 "La configuración se abre en modal y la barra inferior concentra la ejecución y navegación.");
         workspaceIntro.setStyle(UiTheme.HERO_CARD);
@@ -302,12 +517,12 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     }
 
     private Node buildWorkspaceIntroBar() {
-        StyledButton configButton = new StyledButton("Configurar simulación", StyledButton.Kind.SOFT);
-        configButton.setOnAction(event -> openConfigurationModal());
+        workspaceConfigButton = new StyledButton("Configurar simulación", StyledButton.Kind.SOFT);
+        workspaceConfigButton.setOnAction(event -> openConfigurationModal());
         viewModeToggle = new ViewModeToggle();
         viewModeToggle.setOnModeChanged(this::applySimulationViewMode);
 
-        FlowPane compactLegend = new FlowPane(12, 8,
+        workspaceLegendPane = new FlowPane(12, 8,
                 compactLegendChip(Color.web("#93c5fd"), "TCP SYN"),
                 compactLegendChip(Color.web("#60a5fa"), "TCP SYN-ACK"),
                 compactLegendChip(Color.web("#86efac"), "TCP ACK"),
@@ -316,15 +531,16 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 compactLegendChip(Color.web("#fecaca"), "Perdido"),
                 compactLegendChip(Color.web("#fed7aa"), "Retransmitido")
         );
-        compactLegend.setAlignment(Pos.CENTER_RIGHT);
-        compactLegend.setPrefWrapLength(860);
+        workspaceLegendPane.setAlignment(Pos.CENTER_RIGHT);
+        workspaceLegendPane.setPrefWrapLength(860);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        HBox row = new HBox(16, configButton, viewModeToggle, spacer, compactLegend);
+        HBox row = new HBox(16, workspaceConfigButton, viewModeToggle, spacer, workspaceLegendPane);
         row.setAlignment(Pos.CENTER_LEFT);
         row.setPadding(new Insets(2, 0, 0, 0));
+        updateWorkspaceToolbar();
         return row;
     }
 
@@ -381,6 +597,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         if (player != null) {
             player.stop();
         }
+        updateWorkspaceToolbar();
+        updateBottomBarForScreen();
     }
 
     private void openSimpleWorkspace(ProtocolType protocolType) {
@@ -390,6 +608,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         protocolSelector.setValue(protocolType);
         switchSimulationMode(SimulationMode.SIMPLE);
         refreshTheoryPanel();
+        updateLayersLearningContext();
         revealWorkspace();
         onReset();
     }
@@ -399,7 +618,32 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         modeSelector.setValue(SimulationMode.COMPARE);
         switchSimulationMode(SimulationMode.COMPARE);
         refreshTheoryPanel();
+        updateLayersLearningContext();
         revealWorkspace();
+    }
+
+    private void openLayersWorkspace() {
+        currentScreen = WorkspaceScreen.LAYERS;
+        refreshTheoryPanel();
+        updateLayersLearningContext();
+        revealWorkspace();
+        if (simpleModeView != null) {
+            simpleModeView.setVisible(false);
+            simpleModeView.setManaged(false);
+        }
+        if (comparisonModeView != null) {
+            comparisonModeView.setVisible(false);
+            comparisonModeView.setManaged(false);
+            comparisonModeView.stop();
+        }
+        if (layersModeView != null) {
+            layersModeView.setVisible(true);
+            layersModeView.setManaged(true);
+        }
+        if (player != null) {
+            player.stop();
+        }
+        updatePlaybackButtons();
     }
 
     private void revealWorkspace() {
@@ -415,6 +659,42 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             bottomControlBar.setVisible(true);
             bottomControlBar.setManaged(true);
         }
+        updateWorkspaceToolbar();
+        updateBottomBarForScreen();
+    }
+
+    private void updateWorkspaceToolbar() {
+        if (workspaceConfigButton == null || workspaceLegendPane == null || viewModeToggle == null) {
+            return;
+        }
+        boolean showSimulationTools = currentScreen == WorkspaceScreen.TCP
+                || currentScreen == WorkspaceScreen.UDP
+                || currentScreen == WorkspaceScreen.COMPARE;
+        workspaceConfigButton.setVisible(showSimulationTools);
+        workspaceConfigButton.setManaged(showSimulationTools);
+        viewModeToggle.setVisible(showSimulationTools);
+        viewModeToggle.setManaged(showSimulationTools);
+        workspaceLegendPane.setVisible(showSimulationTools);
+        workspaceLegendPane.setManaged(showSimulationTools);
+    }
+
+    private void updateBottomBarForScreen() {
+        if (bottomControlBar == null) {
+            return;
+        }
+        boolean simulationWorkspace = currentScreen == WorkspaceScreen.TCP
+                || currentScreen == WorkspaceScreen.UDP
+                || currentScreen == WorkspaceScreen.COMPARE;
+        bottomControlBar.getRunButton().setDisable(!simulationWorkspace);
+        bottomControlBar.getPlayPauseButton().setDisable(!simulationWorkspace);
+        bottomControlBar.getStepButton().setDisable(!simulationWorkspace);
+        bottomControlBar.getResetButton().setDisable(!simulationWorkspace);
+        bottomControlBar.getReviewFirstButton().setDisable(!simulationWorkspace);
+        bottomControlBar.getReviewStepBackButton().setDisable(!simulationWorkspace);
+        bottomControlBar.getReviewStepForwardButton().setDisable(!simulationWorkspace);
+        bottomControlBar.getReviewLastButton().setDisable(!simulationWorkspace);
+        bottomControlBar.getReviewBox().setManaged(simulationWorkspace && !uiSnapshots.isEmpty());
+        bottomControlBar.getReviewBox().setVisible(simulationWorkspace && !uiSnapshots.isEmpty());
     }
 
     private void openConfigurationModal() {
@@ -705,6 +985,12 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         if (playPauseButton == null || liveStepButton == null) {
             return;
         }
+        if (currentScreen == WorkspaceScreen.LAYERS) {
+            playPauseButton.setDisable(true);
+            liveStepButton.setDisable(true);
+            playPauseButton.setText("Pausar");
+            return;
+        }
         boolean hasRemaining = isComparisonMode()
                 ? comparisonModeView != null && comparisonModeView.hasRemainingEvents()
                 : player != null && player.hasRemainingEvents();
@@ -718,13 +1004,18 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
 
     private void switchSimulationMode(SimulationMode mode) {
         boolean compare = mode == SimulationMode.COMPARE;
+        boolean layers = currentScreen == WorkspaceScreen.LAYERS;
         if (simpleModeView != null) {
-            simpleModeView.setVisible(!compare);
-            simpleModeView.setManaged(!compare);
+            simpleModeView.setVisible(!compare && !layers);
+            simpleModeView.setManaged(!compare && !layers);
         }
         if (comparisonModeView != null) {
-            comparisonModeView.setVisible(compare);
-            comparisonModeView.setManaged(compare);
+            comparisonModeView.setVisible(compare && !layers);
+            comparisonModeView.setManaged(compare && !layers);
+        }
+        if (layersModeView != null) {
+            layersModeView.setVisible(layers);
+            layersModeView.setManaged(layers);
         }
         if (protocolSelector != null) {
             protocolSelector.setDisable(compare || currentScreen == WorkspaceScreen.TCP || currentScreen == WorkspaceScreen.UDP);
@@ -737,6 +1028,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         if (bottomControlBar != null) {
             bottomControlBar.getRunButton().setText(compare ? "Iniciar comparación" : "Iniciar");
         }
+        updateWorkspaceToolbar();
+        updateBottomBarForScreen();
         updatePlaybackButtons();
     }
 
@@ -761,6 +1054,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     private void applyScenarioSelection(Scenario scenario) {
         if (scenario == null) {
             refreshTheoryPanel();
+            updateLayersLearningContext();
             return;
         }
         protocolSelector.setValue(scenario.getProtocol());
@@ -775,10 +1069,30 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         reorderingSlider.setValue(scenario.getNetworkConditions().getReorderingRate() * 100.0);
         bandwidthSpinner.getValueFactory().setValue(scenario.getNetworkConditions().getBandwidthPacketsPerSecond());
         refreshTheoryPanel();
+        updateLayersLearningContext();
     }
 
     private void refreshTheoryPanel() {
         if (protocolSelector == null || viewModel == null) {
+            return;
+        }
+        if (currentScreen == WorkspaceScreen.LAYERS) {
+            currentTheoryText = """
+                    Encapsulación
+                    Cuando una aplicación envía datos, cada capa añade su propia cabecera. El resultado final es una unidad de información preparada para atravesar la red.
+
+                    Capa de transporte
+                    La capa de transporte se encarga de la comunicación extremo a extremo. Aquí trabajan TCP y UDP.
+
+                    Capa de red
+                    La capa de red se ocupa del direccionamiento lógico y del encaminamiento. Aquí se encuentra IP.
+
+                    Cabeceras
+                    Las cabeceras contienen metadatos necesarios para que cada protocolo pueda realizar su función.
+
+                    Modelos
+                    El modelo TCP/IP describe la pila usada realmente en Internet. El modelo OSI ayuda a estudiar funciones y responsabilidades con más detalle.
+                    """;
             return;
         }
         if (currentScreen == WorkspaceScreen.COMPARE || isComparisonMode()) {
@@ -1281,6 +1595,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 scenarioStartMillis = System.currentTimeMillis();
                 currentMessage = pendingMessage;
                 currentProtocol = pendingProtocol;
+                updateLayersLearningContext();
                 addSimulationSeparator(clientPacketList, currentProtocol);
                 addSimulationSeparator(serverPacketList, currentProtocol);
                 int fragmentSize = fragmentSizeSpinner != null ? fragmentSizeSpinner.getValue() : 8;
@@ -1323,6 +1638,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             } else {
                 currentMessage = "";
                 currentProtocol = protocolSelector != null ? protocolSelector.getValue() : ProtocolType.TCP;
+                lastInspectablePacket = null;
+                updateLayersLearningContext();
                 if (slidingWindowPanel != null) {
                     if (currentProtocol == ProtocolType.TCP) {
                         slidingWindowPanel.reset();
@@ -1359,6 +1676,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     }
 
     private void rememberPacketDetails(Packet packet) {
+        lastInspectablePacket = copyPacket(packet);
+        updateLayersLearningContext();
         String payload = packet.getPayload() == null || packet.getPayload().isBlank() ? "-" : packet.getPayload();
         double elapsed = (System.currentTimeMillis() - scenarioStartMillis) / 1000.0;
         lastPacketDetailsText =
@@ -1577,9 +1896,24 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             case TCP -> "Guía docente completa para explicar TCP usando la simulación.";
             case UDP -> "Guía docente completa para explicar UDP usando la simulación.";
             case COMPARE -> "Guía docente para comparar TCP y UDP con la misma red y el mismo mensaje.";
+            case LAYERS -> "Guía docente sobre modelos TCP/IP, OSI, encapsulación y cabeceras.";
             default -> "Contexto docente asociado al modo de trabajo activo.";
         };
         openTextModal("Teoría", subtitle, currentTheoryText, false);
+    }
+
+    private void updateLayersLearningContext() {
+        if (layersLearningView == null) {
+            return;
+        }
+        ProtocolType protocol = currentProtocol;
+        if (protocolSelector != null && protocolSelector.getValue() != null && currentScreen != WorkspaceScreen.COMPARE) {
+            protocol = protocolSelector.getValue();
+        }
+        String message = currentMessage == null || currentMessage.isBlank()
+                ? normalizeMessage(messageField != null ? messageField.getText() : "HOLA")
+                : currentMessage;
+        layersLearningView.updatePacketContext(lastInspectablePacket, protocol, message);
     }
 
     private void openTextModal(String title, String subtitle, String content, boolean monospaced) {

@@ -19,6 +19,20 @@ public final class UiTheme {
     public static final String UDP = "#c4b5fd";
     public static final String LOST = "#fecaca";
     public static final String RETRY = "#fed7aa";
+    public static final String LAYER_BG_APPLICATION = "#DCCEF6";
+    public static final String LAYER_BORDER_APPLICATION = "#8A63D2";
+    public static final String LAYER_BG_PRESENTATION = "#D9E3F4";
+    public static final String LAYER_BORDER_PRESENTATION = "#6D87C6";
+    public static final String LAYER_BG_SESSION = "#D2E1F2";
+    public static final String LAYER_BORDER_SESSION = "#5D89B3";
+    public static final String LAYER_BG_TRANSPORT = "#D6EBCF";
+    public static final String LAYER_BORDER_TRANSPORT = "#5BAA4A";
+    public static final String LAYER_BG_NETWORK = "#F6E7A8";
+    public static final String LAYER_BORDER_NETWORK = "#E2B400";
+    public static final String LAYER_BG_LINK = "#F7D2B8";
+    public static final String LAYER_BORDER_LINK = "#F08A24";
+    public static final String LAYER_BG_PHYSICAL = "#F6C8BE";
+    public static final String LAYER_BORDER_PHYSICAL = "#E96A4A";
 
     public static final String CARD = "-fx-background-color: rgba(255,255,255,0.98);"
             + "-fx-background-radius: 16;"
