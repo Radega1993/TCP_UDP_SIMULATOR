@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modelo TCP/IP y OSI</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <button class="menu-btn"><img src="icons/menu.svg" alt="Menú"></button>
+      <strong>Simulador visual de TCP y UDP</strong>
+    </div>
+
+    <div class="mode-pill">Modelo de capas: TCP/IP vs OSI</div>
+    <div class="ready-pill">✦ Listo para explorar</div>
+
+    <div class="actions">
+      <button><img src="icons/refresh.svg" alt=""> Reiniciar</button>
+      <button>⌘ Vista compacta</button>
+      <button><img src="icons/help.svg" alt=""> Ayuda</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <section class="card">
+        <h3>Configuración</h3>
+
+        <label>Vista</label>
+        <div class="segmented">
+          <button class="active">Comparación</button>
+          <button>Encapsulación</button>
+        </div>
+
+        <label>Protocolo de ejemplo</label>
+        <select>
+          <option>TCP</option>
+          <option>UDP</option>
+        </select>
+
+        <label>Escenario</label>
+        <select>
+          <option>Personalizado</option>
+        </select>
+
+        <label>Mensaje de ejemplo</label>
+        <input value="HOLAALUMNOS" />
+      </section>
+
+      <section class="card">
+        <h3>Unidad de información</h3>
+        <p>Seleccione qué se muestra en cada capa</p>
+        <label class="radio"><input type="radio" checked /> Encabezado + Datos</label>
+        <label class="radio"><input type="radio" /> Solo encabezado</label>
+      </section>
+
+      <section class="card color-card">
+        <h3>Colores por tipo de función</h3>
+        <ul class="color-list">
+          <li><span class="dot app"></span>Aplicación / Sesión</li>
+          <li><span class="dot transport"></span>Transporte</li>
+          <li><span class="dot internet"></span>Red</li>
+          <li><span class="dot link"></span>Enlace de datos</li>
+          <li><span class="dot physical"></span>Física</li>
+        </ul>
+      </section>
+
+      <section class="tip-card">
+        <div class="tip-icon">i</div>
+        <p>Los modelos OSI y TCP/IP ayudan a entender cómo viaja la información en una red.</p>
+      </section>
+    </aside>
+
+    <section class="main">
+      <section class="card model-card">
+        <div class="section-title">
+          <h3>Comparación de modelos</h3>
+          <span>ⓘ</span>
+        </div>
+
+        <div class="models-grid">
+          <div class="model-column tcpip">
+            <div class="model-heading">
+              <img src="icons/layers.svg" alt="">
+              <div>
+                <h2>Modelo TCP/IP</h2>
+                <span>4 capas</span>
+              </div>
+            </div>
+
+            <article class="layer-card layer-app tall-app">
+              <div>
+                <strong>4. Aplicación</strong>
+                <p>Proporciona servicios de red a las aplicaciones.</p>
+                <b>Ejemplos: HTTP, DNS, DHCP, FTP</b>
+              </div>
+              <img src="icons/app.svg" alt="">
+            </article>
+
+            <article class="layer-card layer-transport">
+              <div>
+                <strong>3. Transporte</strong>
+                <p>Comunicación extremo a extremo, control de flujo y errores.</p>
+                <b>Ejemplos: TCP, UDP</b>
+              </div>
+              <img src="icons/transport.svg" alt="">
+            </article>
+
+            <article class="layer-card layer-internet">
+              <div>
+                <strong>2. Internet</strong>
+                <p>Direccionamiento lógico y enrutamiento de paquetes.</p>
+                <b>Ejemplos: IP, ICMP</b>
+              </div>
+              <img src="icons/router.svg" alt="">
+            </article>
+
+            <article class="layer-card layer-link tall-link">
+              <div>
+                <strong>1. Acceso a red</strong>
+                <p>Envío de datos a través del medio físico en la red local.</p>
+                <b>Ejemplos: Ethernet, Wi‑Fi, ARP</b>
+              </div>
+              <img src="icons/network.svg" alt="">
+            </article>
+          </div>
+
+          <div class="bridge-column">
+            <h4>Equivalencia<br>entre modelos</h4>
+            <div class="bridge b-app">Se corresponde con</div>
+            <div class="bridge b-transport">Se corresponde con</div>
+            <div class="bridge b-internet">Se corresponde con</div>
+            <div class="bridge b-link">Se corresponde con</div>
+          </div>
+
+          <div class="model-column osi">
+            <div class="model-heading osi-heading">
+              <img src="icons/layers.svg" alt="">
+              <div>
+                <h2>Modelo OSI</h2>
+                <span>7 capas</span>
+              </div>
+            </div>
+
+            <article class="osi-row row-app">
+              <span>7</span>
+              <div>
+                <strong>Aplicación</strong>
+                <p>Servicios de red a las aplicaciones. Ejemplos: HTTP, DNS, DHCP, FTP</p>
+              </div>
+              <img src="icons/app.svg" alt="">
+            </article>
+
+            <article class="osi-row row-app">
+              <span>6</span>
+              <div>
+                <strong>Presentación</strong>
+                <p>Traduce, cifra y comprime los datos. Ejemplos: TLS, SSL, JPEG, ASCII</p>
+              </div>
+              <img src="icons/code.svg" alt="">
+            </article>
+
+            <article class="osi-row row-app">
+              <span>5</span>
+              <div>
+                <strong>Sesión</strong>
+                <p>Establece, mantiene y termina sesiones. Ejemplos: NetBIOS, RPC, SIP</p>
+              </div>
+              <img src="icons/users.svg" alt="">
+            </article>
+
+            <article class="osi-row row-transport">
+              <span>4</span>
+              <div>
+                <strong>Transporte</strong>
+                <p>Comunicación extremo a extremo. Ejemplos: TCP, UDP</p>
+              </div>
+              <img src="icons/transport.svg" alt="">
+            </article>
+
+            <article class="osi-row row-internet">
+              <span>3</span>
+              <div>
+                <strong>Red</strong>
+                <p>Direccionamiento y enrutamiento. Ejemplos: IP, ICMP</p>
+              </div>
+              <img src="icons/router.svg" alt="">
+            </article>
+
+            <article class="osi-row row-link">
+              <span>2</span>
+              <div>
+                <strong>Enlace de datos</strong>
+                <p>Control de acceso al medio y detección de errores. Ejemplos: Ethernet, MAC, PPP</p>
+              </div>
+              <img src="icons/network.svg" alt="">
+            </article>
+
+            <article class="osi-row row-physical">
+              <span>1</span>
+              <div>
+                <strong>Física</strong>
+                <p>Transmisión de bits por el medio físico. Ejemplos: 100BASE-TX, Wi‑Fi, Cable</p>
+              </div>
+              <img src="icons/physical.svg" alt="">
+            </article>
+          </div>
+        </div>
+
+        <div class="pdu-card">
+          <h3>PDU en cada modelo</h3>
+          <p>Unidad de datos en cada capa</p>
+          <table>
+            <thead>
+              <tr><th>Capa TCP/IP</th><th>PDU</th><th>Capa OSI equivalente</th><th>PDU</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="dot app"></span>Aplicación</td><td>Datos</td><td>7. Aplicación / 6. Presentación / 5. Sesión</td><td>Datos</td></tr>
+              <tr><td><span class="dot transport"></span>Transporte</td><td>Segmento (TCP) / Datagrama (UDP)</td><td>4. Transporte</td><td>Segmento</td></tr>
+              <tr><td><span class="dot internet"></span>Internet</td><td>Paquete (IP)</td><td>3. Red</td><td>Paquete</td></tr>
+              <tr><td><span class="dot link"></span>Acceso a Red</td><td>Trama</td><td>2. Enlace de datos</td><td>Trama</td></tr>
+              <tr><td><span class="dot physical"></span>Física</td><td>Bits</td><td>1. Física</td><td>Bits</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <aside class="details">
+      <section class="card detail-card">
+        <div class="detail-head">
+          <h3>Detalle por capa</h3>
+          <span>Capa seleccionada</span>
+        </div>
+        <h2>4. Aplicación (TCP/IP)</h2>
+        <p>Esta capa agrupa los protocolos utilizados por las aplicaciones para comunicarse a través de la red.</p>
+
+        <h4>Funciones principales</h4>
+        <ul>
+          <li>Interfaz entre aplicaciones y red</li>
+          <li>Formato de datos y codificación</li>
+          <li>Acceso a servicios de red</li>
+        </ul>
+
+        <h4>Ejemplos de protocolos</h4>
+        <div class="chips">
+          <span>HTTP</span><span>DNS</span><span>DHCP</span><span>FTP</span><span>SMTP</span>
+        </div>
+      </section>
+
+      <section class="card encap-card">
+        <h3>Encapsulación <span>(Ejemplo: TCP)</span></h3>
+        <p>Así viaja “HOLAALUMNOS” por la red</p>
+
+        <div class="encap-flow">
+          <div class="encap-step data">Datos de Aplicación<br><strong>HOLAALUMNOS</strong></div>
+          <div class="plus">⊕</div>
+          <div class="encap-step tcp">Segmento TCP<br><strong>TCP Header + Datos</strong></div>
+          <div class="plus">⊕</div>
+          <div class="encap-step ip">Paquete IP<br><strong>IP Header + Segmento TCP</strong></div>
+          <div class="plus">⊕</div>
+          <div class="encap-step eth">Trama Ethernet<br><strong>Ethernet Header + Paquete IP</strong></div>
+          <div class="plus">⊕</div>
+          <div class="encap-step bits">Bits<br><strong>1010 1100 1011 0101 ...</strong></div>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="legend">
+    <strong>Leyenda rápida</strong>
+    <span><i class="dot app"></i>Aplicación / Sesión</span>
+    <span><i class="dot transport"></i>Transporte</span>
+    <span><i class="dot internet"></i>Red</span>
+    <span><i class="dot link"></i>Enlace de datos</span>
+    <span><i class="dot physical"></i>Física</span>
+    <span class="legend-info"><img src="icons/info.svg" alt=""> TCP garantiza entrega confiable. UDP prioriza rapidez y simplicidad.</span>
+  </footer>
+</body>
+</html>

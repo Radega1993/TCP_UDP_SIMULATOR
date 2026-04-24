@@ -29,22 +29,21 @@ public class CongestionPanel extends DashboardCard {
     private final List<CwndHistoryPoint> history = new ArrayList<>();
 
     public CongestionPanel() {
-        super("TCP", "Congestión", "Estado de cwnd, ssthresh, duplicate ACK y crecimiento de la ventana.");
+        super(null, "Control de congestión", null);
 
-        VBox stats = new VBox(8,
-                statRow("Fase", phaseValue, null),
-                statRow("cwnd", cwndValue, "Ventana de congestión. Limita la cantidad de datos en vuelo para evitar saturar la red."),
-                statRow("ssthresh", ssthreshValue, "Umbral que separa la fase de slow start de la fase de congestion avoidance."),
-                statRow("Duplicate ACK", duplicateAckValue, "ACK repetido que indica que el receptor sigue esperando un segmento anterior."),
-                statRow("Bytes en vuelo", bytesInFlightValue, null),
-                statRow("Ventana efectiva", effectiveWindowValue, null)
-        );
+        javafx.scene.layout.GridPane stats = new javafx.scene.layout.GridPane();
+        stats.setHgap(6);
+        stats.setVgap(4);
+        stats.add(statRow("Fase", phaseValue, null), 0, 0);
+        stats.add(statRow("cwnd", cwndValue, "Ventana de congestión. Limita la cantidad de datos en vuelo para evitar saturar la red."), 1, 0);
+        stats.add(statRow("ssthresh", ssthreshValue, "Umbral que separa la fase de slow start de la fase de congestion avoidance."), 0, 1);
+        stats.add(statRow("Ventana efectiva", effectiveWindowValue, null), 1, 1);
 
         reasonLabel.setWrapText(true);
         reasonLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #42586d;");
 
-        VBox root = new VBox(12, stats, chartPanel, reasonLabel);
-        root.setPadding(new Insets(10));
+        VBox root = new VBox(6, stats, chartPanel);
+        root.setPadding(new Insets(0));
         root.setStyle(UiTheme.PANEL_INSET_TINT);
         getContentBox().getChildren().add(root);
         reset();
@@ -121,7 +120,7 @@ public class CongestionPanel extends DashboardCard {
         row.setAlignment(Pos.CENTER_LEFT);
         row.setMaxWidth(Double.MAX_VALUE);
         row.setStyle(UiTheme.PANEL_INSET);
-        row.setPadding(new Insets(8, 10, 8, 10));
+        row.setPadding(new Insets(4, 6, 4, 6));
         if (tooltipText != null) {
             Label hint = new Label("?");
             hint.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #2d6df6;"

@@ -8,8 +8,8 @@ import javafx.scene.layout.HBox;
 import java.util.function.Consumer;
 
 public class ViewModeToggle extends HBox {
-    private final ToggleButton diagramButton = new ToggleButton("Diagrama");
-    private final ToggleButton sceneButton = new ToggleButton("Escena");
+    private final ToggleButton diagramButton = new ToggleButton("Temporal");
+    private final ToggleButton sceneButton = new ToggleButton("Paquetes");
     private Consumer<SimulationViewMode> listener;
 
     public ViewModeToggle() {

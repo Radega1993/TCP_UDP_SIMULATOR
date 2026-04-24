@@ -188,6 +188,7 @@ public class DefaultSimulationEngine implements SimulationEngine {
             if (nextArrival != null && nextArrival.arrivalTime == nextTime) {
                 nextArrival.arrivalProcessed = true;
                 int payloadBytes = nextArrival.payload.length();
+                long flowSettledTime = nextTime;
                 if (!receiverBuffer.canAccept(payloadBytes)) {
                     timeline.log("[TCP] Buffer receptor lleno. Segmento SEQ=" + nextArrival.seq + " fuera de ventana de recepción.");
                     Packet ackPacket = packet(ProtocolType.TCP, Endpoint.SERVER, Endpoint.CLIENT, PacketKind.ACK,
@@ -200,6 +201,8 @@ public class DefaultSimulationEngine implements SimulationEngine {
                     bufferedSegments.putIfAbsent(nextArrival.seq, nextArrival);
                     timeline.log("[TCP] Buffer receptor ocupa " + receiverBuffer.usedBytes() + "/" + receiverBuffer.capacityBytes()
                             + " bytes tras recibir SEQ=" + nextArrival.seq + ".");
+                    timeline.flowControlUpdated(buildFlowSnapshot(slidingWindow, receiverBuffer, receiverBuffer.availableBytes(), scenario.getMessage()), nextTime);
+                    flowSettledTime = nextTime + 180;
 
                     while (bufferedSegments.containsKey(nextExpectedByte)) {
                         OutstandingSegment inOrder = bufferedSegments.remove(nextExpectedByte);
@@ -217,7 +220,7 @@ public class DefaultSimulationEngine implements SimulationEngine {
                     timeline.transmit(ackPacket, ackPlan);
                     nextArrival.pendingAck = new PendingAck(ackPlan.arrivalTime(), nextExpectedByte, advertisedWindow);
                 }
-                timeline.flowControlUpdated(buildFlowSnapshot(slidingWindow, receiverBuffer, advertisedWindow, scenario.getMessage()), nextTime);
+                timeline.flowControlUpdated(buildFlowSnapshot(slidingWindow, receiverBuffer, advertisedWindow, scenario.getMessage()), flowSettledTime);
                 timeline.congestionUpdated(buildCongestionSnapshot(
                         congestionControl,
                         slidingWindow.bytesInFlight(),

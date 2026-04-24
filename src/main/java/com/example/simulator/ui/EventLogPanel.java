@@ -11,11 +11,11 @@ public class EventLogPanel extends DashboardCard {
         super("REGISTRO", "Registro de eventos", "Secuencia temporal de lo que ocurre durante la simulación.");
         logArea.setEditable(false);
         logArea.setWrapText(true);
-        logArea.setPrefRowCount(7);
+        logArea.setPrefRowCount(9);
         logArea.setStyle(UiTheme.MUTED_TEXT_SURFACE);
 
         VBox wrapper = new VBox(logArea);
-        wrapper.setPadding(new Insets(6));
+        wrapper.setPadding(new Insets(4));
         wrapper.setStyle(UiTheme.PANEL_INSET);
 
         getContentBox().getChildren().add(wrapper);

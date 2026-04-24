@@ -56,6 +56,7 @@ import javafx.scene.image.Image;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.transform.Scale;
 import javafx.stage.Stage;
 import javafx.stage.Modality;
 import javafx.util.Duration;
@@ -74,6 +75,7 @@ import javafx.scene.layout.*;
 
 
 public class SimulatorApp extends Application implements SimulationPlaybackListener {
+    private static final double TCP_METRIC_CARD_HEIGHT = 220;
     private Pane networkPane;
     private NetworkCanvas networkCanvas;
     private SequenceDiagramView sequenceDiagramView;
@@ -90,8 +92,15 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     private JavaFxSimulationPlayer player;
     private ComparisonModeView comparisonModeView;
     private BottomControlBar bottomControlBar;
+    private VBox appHeader;
+    private Button tcpTopPlayPauseButton;
+    private Button tcpTopStepButton;
+    private Button tcpTopResetButton;
+    private Label tcpTopProtocolBadge;
+    private ViewModeToggle tcpTopViewModeToggle;
     private Stage configurationStage;
     private VBox workspaceContent;
+    private DashboardCard workspaceIntroCard;
     private StackPane appContentStack;
     private Node homeView;
     private Node simpleModeView;
@@ -149,6 +158,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     private String currentTheoryText = "";
     private SlidingWindowPanel slidingWindowPanel;
     private CongestionPanel congestionPanel;
+    private HBox receiverBufferCells;
+    private Label receiverBufferUsageLabel;
+    private Label receiverAdvertisedWindowLabel;
     private ViewModeToggle viewModeToggle;
     private StyledButton workspaceConfigButton;
     private FlowPane workspaceLegendPane;
@@ -196,9 +208,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     }
 
     private VBox buildHeader() {
-        VBox box = new VBox(new SimulatorHeader());
-        box.setPadding(new Insets(0, 0, 16, 0));
-        return box;
+        appHeader = new VBox(new SimulatorHeader());
+        appHeader.setPadding(new Insets(0, 0, 16, 0));
+        return appHeader;
     }
 
     private Node buildApplicationContent() {
@@ -506,12 +518,12 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         layersModeView.setManaged(false);
 
         modeContentStack = new StackPane(simpleModeView, comparisonModeView, layersModeView);
-        DashboardCard workspaceIntro = new DashboardCard("ESPACIO DE TRABAJO", "Simulación activa",
+        workspaceIntroCard = new DashboardCard("ESPACIO DE TRABAJO", "Simulación activa",
                 "La configuración se abre en modal y la barra inferior concentra la ejecución y navegación.");
-        workspaceIntro.setStyle(UiTheme.HERO_CARD);
-        workspaceIntro.setContent(buildWorkspaceIntroBar());
+        workspaceIntroCard.setStyle(UiTheme.HERO_CARD);
+        workspaceIntroCard.setContent(buildWorkspaceIntroBar());
 
-        VBox content = new VBox(18, workspaceIntro, modeContentStack);
+        VBox content = new VBox(18, workspaceIntroCard, modeContentStack);
         content.setPadding(new Insets(0, 0, 12, 0));
         return content;
     }
@@ -591,6 +603,10 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             bottomControlBar.setVisible(false);
             bottomControlBar.setManaged(false);
         }
+        if (appHeader != null) {
+            appHeader.setVisible(true);
+            appHeader.setManaged(true);
+        }
         if (comparisonModeView != null) {
             comparisonModeView.stop();
         }
@@ -603,6 +619,10 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
 
     private void openSimpleWorkspace(ProtocolType protocolType) {
         currentScreen = protocolType == ProtocolType.TCP ? WorkspaceScreen.TCP : WorkspaceScreen.UDP;
+        if (tcpTopProtocolBadge != null) {
+            tcpTopProtocolBadge.setText("⌁ " + protocolType.name() + " activo");
+            tcpTopProtocolBadge.setStyle(protocolType == ProtocolType.TCP ? tcpBadgeStyle() : udpBadgeStyle());
+        }
         modeSelector.setValue(SimulationMode.SIMPLE);
         protocolSelector.setDisable(false);
         protocolSelector.setValue(protocolType);
@@ -656,8 +676,14 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             workspaceContent.setManaged(true);
         }
         if (bottomControlBar != null) {
-            bottomControlBar.setVisible(true);
-            bottomControlBar.setManaged(true);
+            boolean useEmbeddedTcpBar = currentScreen == WorkspaceScreen.TCP || currentScreen == WorkspaceScreen.UDP;
+            bottomControlBar.setVisible(!useEmbeddedTcpBar);
+            bottomControlBar.setManaged(!useEmbeddedTcpBar);
+        }
+        if (appHeader != null) {
+            boolean useEmbeddedTcpBar = currentScreen == WorkspaceScreen.TCP || currentScreen == WorkspaceScreen.UDP;
+            appHeader.setVisible(!useEmbeddedTcpBar);
+            appHeader.setManaged(!useEmbeddedTcpBar);
         }
         updateWorkspaceToolbar();
         updateBottomBarForScreen();
@@ -670,6 +696,11 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         boolean showSimulationTools = currentScreen == WorkspaceScreen.TCP
                 || currentScreen == WorkspaceScreen.UDP
                 || currentScreen == WorkspaceScreen.COMPARE;
+        boolean embeddedTcpLayout = currentScreen == WorkspaceScreen.TCP || currentScreen == WorkspaceScreen.UDP;
+        if (workspaceIntroCard != null) {
+            workspaceIntroCard.setVisible(!embeddedTcpLayout);
+            workspaceIntroCard.setManaged(!embeddedTcpLayout);
+        }
         workspaceConfigButton.setVisible(showSimulationTools);
         workspaceConfigButton.setManaged(showSimulationTools);
         viewModeToggle.setVisible(showSimulationTools);
@@ -756,15 +787,35 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     }
 
     private Node buildSimpleModeView() {
+        Node topbar = buildTcpWorkspaceTopbar();
+        Node sidebar = buildTcpSidebar();
         VBox centerColumn = buildSimpleCenter();
-        Node leftPanel = buildLeftPanel();
         Node rightPanel = buildRightPanel();
-        HBox row = new HBox(18, leftPanel, centerColumn, rightPanel);
-        row.setAlignment(Pos.TOP_LEFT);
-        HBox.setHgrow(centerColumn, Priority.ALWAYS);
+        Node legend = buildTcpLegendBar();
+
+        GridPane layout = new GridPane();
+        layout.setHgap(14);
+        layout.setVgap(14);
+        layout.setAlignment(Pos.TOP_LEFT);
+        layout.setStyle("-fx-background-color: #f3f7fb;");
+
+        ColumnConstraints left = new ColumnConstraints(300, 300, 300);
+        ColumnConstraints center = new ColumnConstraints(620, 960, Double.MAX_VALUE);
+        center.setHgrow(Priority.ALWAYS);
+        ColumnConstraints right = new ColumnConstraints(430, 430, 430);
+        layout.getColumnConstraints().setAll(left, center, right);
+        layout.add(sidebar, 0, 0);
+        layout.add(centerColumn, 1, 0);
+        layout.add(rightPanel, 2, 0);
+        GridPane.setHgrow(centerColumn, Priority.ALWAYS);
         centerColumn.setMaxWidth(Double.MAX_VALUE);
+
+        VBox shell = new VBox(14, topbar, layout, legend);
+        shell.setPadding(new Insets(0, 0, 14, 0));
+        shell.setStyle("-fx-background-color: #f3f7fb;");
         mainContentRow = new FlowPane();
-        mainContentRow.getChildren().setAll(row);
+        mainContentRow.getChildren().setAll(shell);
+        mainContentRow.setStyle("-fx-background-color: #f3f7fb;");
         return mainContentRow;
     }
 
@@ -784,26 +835,288 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         serverHistoryCard.setPrefWidth(176);
         serverHistoryCard.setMinWidth(164);
 
-        HBox simulationLane = new HBox(14, clientHistoryCard, networkCanvas, serverHistoryCard);
+        Node networkCanvasViewport = buildNetworkCanvasViewport();
+        HBox simulationLane = new HBox(12, clientHistoryCard, networkCanvasViewport, serverHistoryCard);
         simulationLane.setAlignment(Pos.TOP_LEFT);
-        HBox.setHgrow(networkCanvas, Priority.ALWAYS);
-        networkCanvas.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(networkCanvasViewport, Priority.ALWAYS);
 
         simulationRow = new FlowPane();
         simulationRow.getChildren().setAll(simulationLane);
 
-        DashboardCard simulationCard = new DashboardCard("SIMULACIÓN", "Escenario de red", "La zona principal de observación para seguir el tránsito de paquetes.");
-        simulationCard.setStyle(UiTheme.HERO_CARD);
+        DashboardCard simulationCard = new DashboardCard(null, "Diagrama temporal", "Intercambio ordenado de mensajes entre cliente y servidor");
+        simulationCard.setStyle(tcpCardStyle());
+        simulationCard.setPadding(new Insets(16, 18, 18, 18));
+        simulationCard.setMinHeight(500);
+        simulationCard.setPrefHeight(500);
+        simulationCard.setMaxHeight(500);
         StackPane simulationModeStack = new StackPane(simulationRow, sequenceDiagramView);
+        simulationModeStack.setAlignment(Pos.TOP_CENTER);
+        simulationModeStack.setMaxWidth(Double.MAX_VALUE);
+        StackPane.setAlignment(sequenceDiagramView, Pos.TOP_CENTER);
+        StackPane.setAlignment(simulationRow, Pos.TOP_CENTER);
         simulationCard.setContent(simulationModeStack);
         simulationCard.setMaxWidth(Double.MAX_VALUE);
+        clipToBounds(simulationCard);
 
-        VBox box = new VBox(14, simulationCard);
+        Node metrics = buildTcpMetricGrid();
+        VBox box = new VBox(12, simulationCard, metrics);
         box.setFillWidth(true);
         box.setMaxWidth(Double.MAX_VALUE);
-        box.setPrefWidth(1100);
+        box.setPrefWidth(960);
         applySimulationViewMode(currentViewMode);
         return box;
+    }
+
+    private Node buildNetworkCanvasViewport() {
+        Pane viewport = new Pane(networkCanvas);
+        viewport.setMinSize(552, 410);
+        viewport.setPrefSize(552, 410);
+        viewport.setMaxSize(552, 410);
+        Rectangle clip = new Rectangle(552, 410);
+        clip.setArcWidth(16);
+        clip.setArcHeight(16);
+        viewport.setClip(clip);
+        networkCanvas.getTransforms().setAll(new Scale(0.78, 0.92, 0, 0));
+        networkCanvas.setLayoutX(2);
+        networkCanvas.setLayoutY(8);
+        return viewport;
+    }
+
+    private Node buildTcpWorkspaceTopbar() {
+        Label menu = new Label("☰");
+        menu.setAlignment(Pos.CENTER);
+        menu.setOnMouseClicked(event -> showHomeScreen());
+        menu.setStyle("-fx-min-width: 34; -fx-min-height: 34; -fx-alignment: center;"
+                + "-fx-background-color: #e8f1ff; -fx-background-radius: 10;"
+                + "-fx-text-fill: #2f80ed; -fx-font-size: 17px; -fx-font-weight: bold; -fx-cursor: hand;");
+
+        Label brand = new Label("Simulador visual de TCP y UDP");
+        brand.setStyle("-fx-font-size: 17px; -fx-font-weight: 800; -fx-text-fill: #102a43;");
+        HBox brandBox = new HBox(12, menu, brand);
+        brandBox.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(brandBox, Priority.ALWAYS);
+
+        tcpTopProtocolBadge = new Label("⌁ TCP activo");
+        tcpTopProtocolBadge.setStyle(tcpBadgeStyle());
+
+        tcpTopResetButton = topGhostButton("↻ Reiniciar");
+        tcpTopResetButton.setOnAction(event -> resetActiveMode());
+        tcpTopPlayPauseButton = topGhostButton("Ⅱ Pausar");
+        tcpTopPlayPauseButton.setOnAction(event -> togglePlaybackPause());
+        tcpTopStepButton = topGhostButton("▷ Paso a paso");
+        tcpTopStepButton.setOnAction(event -> {
+            player.stepForward();
+            updatePlaybackButtons();
+        });
+
+        tcpTopViewModeToggle = new ViewModeToggle();
+        tcpTopViewModeToggle.setValue(currentViewMode);
+        tcpTopViewModeToggle.setOnModeChanged(this::applySimulationViewMode);
+
+        Label speedLabel = new Label("Velocidad");
+        speedLabel.setStyle("-fx-text-fill: #627d98; -fx-font-size: 13px; -fx-font-weight: 600;");
+        ComboBox<String> speed = new ComboBox<>();
+        speed.getItems().setAll("0.5x", "1.0x", "1.5x", "2.0x", "3.0x");
+        speed.setValue("1.0x");
+        speed.setPrefWidth(88);
+        speed.setStyle("-fx-background-color: #ffffff; -fx-border-color: #d9e5f2; -fx-border-radius: 0; -fx-background-radius: 0;");
+        speed.setOnAction(event -> {
+            String value = speed.getValue();
+            if (value != null && speedSlider != null) {
+                speedSlider.setValue(Double.parseDouble(value.replace("x", "")));
+            }
+        });
+        HBox speedBox = new HBox(10, speedLabel, speed);
+        speedBox.setAlignment(Pos.CENTER_LEFT);
+        speedBox.setPadding(new Insets(0, 0, 0, 12));
+        speedBox.setStyle("-fx-background-color: #ffffff; -fx-border-color: #d9e5f2;"
+                + "-fx-background-radius: 10; -fx-border-radius: 10;");
+
+        HBox topbar = new HBox(14, brandBox, tcpTopProtocolBadge, tcpTopViewModeToggle, tcpTopResetButton, tcpTopPlayPauseButton, tcpTopStepButton, speedBox);
+        topbar.setAlignment(Pos.CENTER_LEFT);
+        topbar.setPadding(new Insets(0, 18, 0, 18));
+        topbar.setMinHeight(58);
+        topbar.setStyle("-fx-background-color: rgba(255,255,255,0.95);"
+                + "-fx-border-color: transparent transparent #d9e5f2 transparent;"
+                + "-fx-border-width: 0 0 1 0;");
+        return topbar;
+    }
+
+    private String tcpBadgeStyle() {
+        return "-fx-background-color: #e3fcef; -fx-border-color: #bff0d4;"
+                + "-fx-background-radius: 999; -fx-border-radius: 999;"
+                + "-fx-text-fill: #0f7a3f; -fx-font-size: 13px; -fx-font-weight: 700;"
+                + "-fx-padding: 7 14 7 14;";
+    }
+
+    private String udpBadgeStyle() {
+        return "-fx-background-color: #f1e8ff; -fx-border-color: #dac7ff;"
+                + "-fx-background-radius: 999; -fx-border-radius: 999;"
+                + "-fx-text-fill: #6b35b5; -fx-font-size: 13px; -fx-font-weight: 700;"
+                + "-fx-padding: 7 14 7 14;";
+    }
+
+    private Button topGhostButton(String text) {
+        Button button = new Button(text);
+        button.setStyle("-fx-background-color: #ffffff; -fx-border-color: #d9e5f2;"
+                + "-fx-background-radius: 10; -fx-border-radius: 10;"
+                + "-fx-text-fill: #102a43; -fx-font-weight: 700; -fx-padding: 9 14 9 14;");
+        return button;
+    }
+
+    private Node buildTcpSidebar() {
+        controlPanel.setPrefWidth(300);
+        controlPanel.setMaxWidth(300);
+        return controlPanel;
+    }
+
+    private Node buildTcpMetricGrid() {
+        slidingWindowPanel = new SlidingWindowPanel();
+        congestionPanel = new CongestionPanel();
+        DashboardCard bufferCard = new DashboardCard(null, "Buffer de recepción", "(Servidor)");
+        bufferCard.setStyle(tcpCardStyle());
+        bufferCard.setMinHeight(TCP_METRIC_CARD_HEIGHT);
+        bufferCard.setPrefHeight(TCP_METRIC_CARD_HEIGHT);
+        bufferCard.setMaxHeight(TCP_METRIC_CARD_HEIGHT);
+        bufferCard.setContent(buildReceiverBufferGraphic());
+        clipToBounds(bufferCard);
+
+        DashboardCard transitCard = new DashboardCard(null, "Paquetes en tránsito", null);
+        transitCard.setStyle(tcpCardStyle());
+        transitCard.setMinHeight(TCP_METRIC_CARD_HEIGHT);
+        transitCard.setPrefHeight(TCP_METRIC_CARD_HEIGHT);
+        transitCard.setMaxHeight(TCP_METRIC_CARD_HEIGHT);
+        transitCard.setContent(new VBox(8, buildTransitLine(), metricText("0 paquetes en tránsito\nLatencia actual: 1200 ms   Jitter: 0 ms   Pérdida: 20%")));
+        clipToBounds(transitCard);
+
+        slidingWindowPanel.setStyle(tcpCardStyle());
+        slidingWindowPanel.setMinHeight(TCP_METRIC_CARD_HEIGHT);
+        slidingWindowPanel.setPrefHeight(TCP_METRIC_CARD_HEIGHT);
+        slidingWindowPanel.setMaxHeight(TCP_METRIC_CARD_HEIGHT);
+        clipToBounds(slidingWindowPanel);
+        congestionPanel.setStyle(tcpCardStyle());
+        congestionPanel.setMinHeight(TCP_METRIC_CARD_HEIGHT);
+        congestionPanel.setPrefHeight(TCP_METRIC_CARD_HEIGHT);
+        congestionPanel.setMaxHeight(TCP_METRIC_CARD_HEIGHT);
+        clipToBounds(congestionPanel);
+        GridPane grid = new GridPane();
+        grid.setHgap(12);
+        grid.setVgap(12);
+        ColumnConstraints c1 = new ColumnConstraints();
+        c1.setPercentWidth(50);
+        c1.setHgrow(Priority.ALWAYS);
+        ColumnConstraints c2 = new ColumnConstraints();
+        c2.setPercentWidth(50);
+        c2.setHgrow(Priority.ALWAYS);
+        grid.getColumnConstraints().setAll(c1, c2);
+        grid.add(slidingWindowPanel, 0, 0);
+        grid.add(bufferCard, 1, 0);
+        grid.add(congestionPanel, 0, 1);
+        grid.add(transitCard, 1, 1);
+        return grid;
+    }
+
+    private Node byteRow(int ackCount, int emptyCount) {
+        HBox row = new HBox(6);
+        for (int i = 0; i < ackCount; i++) {
+            row.getChildren().add(byteCell("#6fcf97", "#68c38f"));
+        }
+        for (int i = 0; i < emptyCount; i++) {
+            row.getChildren().add(byteCell("#edf2f7", "#d9e5f2"));
+        }
+        return row;
+    }
+
+    private Node buildReceiverBufferGraphic() {
+        receiverBufferCells = new HBox(6);
+        receiverBufferCells.setAlignment(Pos.CENTER_LEFT);
+        for (int i = 0; i < 12; i++) {
+            receiverBufferCells.getChildren().add(byteCell("#edf2f7", "#d9e5f2"));
+        }
+
+        receiverBufferUsageLabel = metricText("Buffer: 0 / 24 bytes");
+        receiverAdvertisedWindowLabel = metricText("Ventana anunciada: 24 bytes");
+        Label hint = new Label("El verde representa bytes ocupando el buffer del servidor; al liberar datos, vuelve a crecer la ventana anunciada.");
+        hint.setWrapText(true);
+        hint.setStyle("-fx-text-fill: #627d98; -fx-font-size: 12px;");
+
+        return new VBox(8,
+                receiverBufferCells,
+                legendInline("Datos en buffer", "Espacio libre"),
+                receiverBufferUsageLabel,
+                receiverAdvertisedWindowLabel,
+                hint
+        );
+    }
+
+    private void updateReceiverBufferGraphic(FlowControlSnapshot snapshot) {
+        if (receiverBufferCells == null || snapshot == null) {
+            return;
+        }
+        int capacity = Math.max(1, snapshot.getReceiverBufferCapacity());
+        int used = Math.max(0, Math.min(capacity, snapshot.getReceiverBufferUsed()));
+        int advertised = Math.max(0, snapshot.getReceiverAdvertisedWindow());
+        int cellCount = receiverBufferCells.getChildren().size();
+
+        for (int i = 0; i < cellCount; i++) {
+            double cellStart = i * (capacity / (double) cellCount);
+            double cellEnd = (i + 1) * (capacity / (double) cellCount);
+            boolean occupied = cellStart < used && cellEnd > 0;
+            String fill = occupied ? "#6fcf97" : "#edf2f7";
+            String stroke = occupied ? "#68c38f" : "#d9e5f2";
+            receiverBufferCells.getChildren().get(i).setStyle("-fx-background-color: " + fill + "; -fx-border-color: " + stroke + ";"
+                    + "-fx-background-radius: 5; -fx-border-radius: 5;");
+        }
+
+        if (receiverBufferUsageLabel != null) {
+            receiverBufferUsageLabel.setText("Buffer: " + used + " / " + capacity + " bytes");
+        }
+        if (receiverAdvertisedWindowLabel != null) {
+            receiverAdvertisedWindowLabel.setText("Ventana anunciada: " + advertised + " bytes");
+        }
+    }
+
+    private Region byteCell(String fill, String stroke) {
+        Region cell = new Region();
+        cell.setMinSize(22, 22);
+        cell.setPrefSize(22, 22);
+        cell.setMaxSize(22, 22);
+        cell.setStyle("-fx-background-color: " + fill + "; -fx-border-color: " + stroke + ";"
+                + "-fx-background-radius: 5; -fx-border-radius: 5;");
+        return cell;
+    }
+
+    private Node legendInline(String first, String second) {
+        Label a = new Label("■ " + first);
+        Label b = new Label("■ " + second);
+        a.setStyle("-fx-text-fill: #627d98; -fx-font-size: 12px;");
+        b.setStyle("-fx-text-fill: #627d98; -fx-font-size: 12px;");
+        return new HBox(14, a, b);
+    }
+
+    private Label metricText(String text) {
+        Label label = new Label(text);
+        label.setWrapText(true);
+        label.setStyle("-fx-text-fill: #627d98; -fx-font-size: 13px; -fx-line-spacing: 4px;");
+        return label;
+    }
+
+    private Node buildTransitLine() {
+        Label client = new Label("▣ Cliente");
+        Label cloud = new Label("☁");
+        Label server = new Label("▤ Servidor");
+        client.setWrapText(false);
+        server.setWrapText(false);
+        client.setMinWidth(118);
+        server.setMinWidth(128);
+        client.setStyle("-fx-text-fill: #2f80ed; -fx-font-size: 20px; -fx-font-weight: 800; -fx-alignment: center;");
+        cloud.setStyle("-fx-text-fill: #a9c8e8; -fx-font-size: 34px;");
+        server.setStyle("-fx-text-fill: #2f80ed; -fx-font-size: 20px; -fx-font-weight: 800; -fx-alignment: center;");
+        HBox line = new HBox(28, client, cloud, server);
+        line.setAlignment(Pos.CENTER);
+        line.setMinHeight(46);
+        line.setPrefHeight(46);
+        return line;
     }
 
     private void openTextDetailFromDiagram(String details) {
@@ -830,38 +1143,125 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     }
 
     private Node buildRightPanel() {
-        VBox panel = new VBox(14);
-        panel.setPadding(new Insets(0, 0, 0, 2));
-        panel.setPrefWidth(350);
-        panel.setMinWidth(320);
+        VBox panel = new VBox(12);
+        panel.setPrefWidth(430);
+        panel.setMinWidth(430);
+        panel.setMaxWidth(430);
 
         EventLogPanel eventLogPanel = new EventLogPanel();
+        eventLogPanel.setStyle(tcpCardStyle());
+        eventLogPanel.setPreferredHeight(300);
         logArea = eventLogPanel.getLogArea();
 
-        Label hint = new Label("Consejo didáctico: compara el texto enviado y el recibido para ver el efecto de la red.");
-        hint.setWrapText(true);
-        hint.setStyle("-fx-text-fill: #617487; -fx-font-size: 12px;");
+        StatePanel statePanel = new StatePanel();
+        statePanel.setStyle(tcpCardStyle());
+        statePanel.setMinHeight(190);
+        statePanel.setPrefHeight(190);
+        statePanel.setMaxHeight(190);
+        clipToBounds(statePanel);
+        clientStateLabel = statePanel.getClientStateLabel();
+        serverStateLabel = statePanel.getServerStateLabel();
+        statusLabel = statePanel.getStatusLabel();
 
-        MessageSummaryPanel clientCard = new MessageSummaryPanel("Cliente", "Mensaje enviado");
-        MessageSummaryPanel serverCard = new MessageSummaryPanel("Servidor", "Mensaje recibido");
-        clientDataArea = clientCard.getTextArea();
-        serverDataArea = serverCard.getTextArea();
-
-        clientCard.setPrefWidth(150);
-        serverCard.setPrefWidth(150);
-
-        HBox messagePanels = new HBox(10, clientCard, serverCard);
-        HBox.setHgrow(clientCard, Priority.ALWAYS);
-        HBox.setHgrow(serverCard, Priority.ALWAYS);
-        clientCard.setMaxWidth(Double.MAX_VALUE);
-        serverCard.setMaxWidth(Double.MAX_VALUE);
-
-        DashboardCard messageCard = new DashboardCard("RESULTADO", "Mensajes y reconstrucción", "Vista paralela del mensaje en origen y destino.");
-        messageCard.setContent(new VBox(10, messagePanels, hint));
+        HBox messageCard = new HBox(14);
+        messageCard.setAlignment(Pos.CENTER_LEFT);
+        messageCard.setPadding(new Insets(17));
+        messageCard.setStyle("-fx-background-color: linear-gradient(to bottom, #f1fff7, #e3fcef);"
+                + "-fx-background-radius: 16; -fx-border-radius: 16;"
+                + "-fx-border-color: #c6f2d8; -fx-effect: dropshadow(gaussian, rgba(16,42,67,0.07), 30, 0.20, 0, 10);");
+        messageCard.setMinHeight(96);
+        messageCard.setPrefHeight(96);
+        messageCard.setMaxHeight(96);
+        clipToBounds(messageCard);
+        Label successIcon = new Label("✓");
+        successIcon.setAlignment(Pos.CENTER);
+        successIcon.setStyle("-fx-min-width: 44; -fx-min-height: 44; -fx-background-color: #26ad61;"
+                + "-fx-background-radius: 999; -fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: 800;");
+        clientDataArea = new TextArea();
+        serverDataArea = new TextArea();
+        clientDataArea.setVisible(false);
+        clientDataArea.setManaged(false);
+        serverDataArea.setVisible(false);
+        serverDataArea.setManaged(false);
+        serverDataArea.setEditable(false);
+        serverDataArea.setWrapText(true);
+        serverDataArea.setPrefRowCount(3);
+        serverDataArea.setStyle("-fx-control-inner-background: transparent; -fx-background-color: transparent;"
+                + "-fx-border-color: transparent; -fx-text-fill: #0f7a3f; -fx-font-size: 13px;");
+        Label successTitle = new Label("Simulación completada");
+        successTitle.setStyle("-fx-text-fill: #063b21; -fx-font-size: 16px; -fx-font-weight: 800;");
+        Label successSubtitle = new Label("El mensaje se entregó correctamente.");
+        successSubtitle.setStyle("-fx-text-fill: #2f6f4c; -fx-font-size: 13px;");
+        Label successText = new Label("Sin simulación activa.");
+        successText.setWrapText(true);
+        successText.setMaxWidth(330);
+        successText.setStyle("-fx-text-fill: #0f7a3f; -fx-font-size: 13px; -fx-font-weight: 700;");
+        serverDataArea.textProperty().addListener((obs, oldText, text) -> successText.setText(text == null || text.isBlank()
+                ? "Sin simulación activa."
+                : text.replace('\n', ' ')));
+        VBox successCopy = new VBox(4, successTitle, successSubtitle, successText);
+        successCopy.setAlignment(Pos.CENTER_LEFT);
+        messageCard.getChildren().setAll(successIcon, successCopy);
         messageCard.setMaxWidth(Double.MAX_VALUE);
 
-        panel.getChildren().addAll(eventLogPanel, messageCard);
+        panel.getChildren().addAll(statePanel, eventLogPanel, messageCard);
         return panel;
+    }
+
+    private Node buildTcpLegendBar() {
+        HBox legend = new HBox(24,
+                legendItem("↗", "SYN", "Inicio de conexión", "#2f80ed", "#e8f1ff"),
+                legendItem("↙", "SYN-ACK", "Respuesta del servidor", "#2f80ed", "#e8f1ff"),
+                legendItem("↔", "ACK", "Confirmación", "#26ad61", "#e3fcef"),
+                legendItem("▣", "DATA", "Datos de aplicación", "#2f80ed", "#e8f1ff"),
+                legendItem("↯", "FIN", "Cierre", "#f2994a", "#fff1df"),
+                legendItem("✖", "Pérdida", "Paquete perdido", "#ee5a5a", "#ffe9e9"),
+                legendItem("↻", "Retrans.", "Retransmisión", "#f2994a", "#fff5db")
+        );
+        Label tip = new Label("ⓘ Los ACK son acumulativos: indican el siguiente byte esperado.");
+        tip.setWrapText(true);
+        tip.setMaxWidth(290);
+        tip.setStyle("-fx-background-color: #e8f1ff; -fx-border-color: #cfe0f4;"
+                + "-fx-background-radius: 12; -fx-border-radius: 12;"
+                + "-fx-text-fill: #486581; -fx-font-size: 12px; -fx-padding: 10 12 10 12;");
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        legend.getChildren().addAll(spacer, tip);
+        legend.setAlignment(Pos.CENTER_LEFT);
+        legend.setPadding(new Insets(10, 14, 10, 14));
+        legend.setMinHeight(56);
+        legend.setPrefHeight(56);
+        legend.setMaxHeight(56);
+        legend.setStyle(tcpCardStyle());
+        return legend;
+    }
+
+    private Node legendItem(String icon, String title, String text, String color, String bg) {
+        Label iconLabel = new Label(icon);
+        iconLabel.setAlignment(Pos.CENTER);
+        iconLabel.setStyle("-fx-min-width: 22; -fx-min-height: 22; -fx-background-color: " + bg + ";"
+                + "-fx-background-radius: 7; -fx-text-fill: " + color + "; -fx-font-weight: 800;");
+        Label label = new Label(title + "  " + text);
+        label.setStyle("-fx-text-fill: #627d98; -fx-font-size: 12px;");
+        return new HBox(8, iconLabel, label);
+    }
+
+    private String tcpCardStyle() {
+        return "-fx-background-color: #ffffff;"
+                + "-fx-background-radius: 16;"
+                + "-fx-border-radius: 16;"
+                + "-fx-border-color: #d9e5f2;"
+                + "-fx-border-width: 1;"
+                + "-fx-effect: dropshadow(gaussian, rgba(16,42,67,0.07), 30, 0.20, 0, 10);";
+    }
+
+    private void clipToBounds(Region region) {
+        Rectangle clip = new Rectangle();
+        clip.setArcWidth(16);
+        clip.setArcHeight(16);
+        clip.widthProperty().bind(region.widthProperty());
+        clip.heightProperty().bind(region.heightProperty());
+        region.setClip(clip);
     }
 
     private void buildControls() {
@@ -884,6 +1284,13 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
 
         scenarioSelector.setOnAction(event -> applyScenarioSelection(scenarioSelector.getValue()));
         protocolSelector.setOnAction(event -> refreshTheoryPanel());
+        controlPanel.getRunButton().setOnAction(event -> startSimulation());
+        controlPanel.getPlayPauseButton().setOnAction(event -> togglePlaybackPause());
+        controlPanel.getLiveStepButton().setOnAction(event -> {
+            player.stepForward();
+            updatePlaybackButtons();
+        });
+        controlPanel.getResetButton().setOnAction(event -> resetActiveMode());
         updatePlaybackButtons();
     }
 
@@ -1000,6 +1407,13 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         playPauseButton.setDisable(!hasRemaining);
         liveStepButton.setDisable(!hasRemaining);
         playPauseButton.setText(paused ? "Reanudar" : "Pausar");
+        if (tcpTopPlayPauseButton != null) {
+            tcpTopPlayPauseButton.setDisable(!hasRemaining);
+            tcpTopPlayPauseButton.setText(paused ? "▷ Reanudar" : "Ⅱ Pausar");
+        }
+        if (tcpTopStepButton != null) {
+            tcpTopStepButton.setDisable(!hasRemaining);
+        }
     }
 
     private void switchSimulationMode(SimulationMode mode) {
@@ -1512,6 +1926,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             if (slidingWindowPanel != null) {
                 slidingWindowPanel.update(snapshot);
             }
+            updateReceiverBufferGraphic(snapshot);
         });
     }
 
@@ -1580,13 +1995,22 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             clientDataArea.clear();
             serverDataArea.clear();
             if (slidingWindowPanel != null) {
-                slidingWindowPanel.reset();
+                if (currentScreen == WorkspaceScreen.UDP || currentProtocol == ProtocolType.UDP) {
+                    slidingWindowPanel.showUnavailable();
+                } else {
+                    slidingWindowPanel.reset();
+                }
             }
+            updateReceiverBufferGraphic(new FlowControlSnapshot(24, 0, 0, 0, 0, 24, 0, 24));
             if (sequenceDiagramView != null) {
                 sequenceDiagramView.reset();
             }
             if (congestionPanel != null) {
-                congestionPanel.reset();
+                if (currentScreen == WorkspaceScreen.UDP || currentProtocol == ProtocolType.UDP) {
+                    congestionPanel.showUnavailable();
+                } else {
+                    congestionPanel.reset();
+                }
             }
             statusLabel.setText("Listo para iniciar");
             refreshTheoryPanel();
@@ -1605,18 +2029,20 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                         "Mensaje a enviar:\n\"" + currentMessage + "\""
                 );
                 if (currentProtocol == ProtocolType.TCP) {
+                    FlowControlSnapshot initialFlow = new FlowControlSnapshot(
+                            tcpWindowSizeSpinner.getValue(),
+                            0,
+                            0,
+                            0,
+                            currentMessage.length(),
+                            tcpReceiverBufferSpinner.getValue(),
+                            0,
+                            tcpReceiverBufferSpinner.getValue()
+                    );
                     if (slidingWindowPanel != null) {
-                        slidingWindowPanel.update(new FlowControlSnapshot(
-                                tcpWindowSizeSpinner.getValue(),
-                                0,
-                                0,
-                                0,
-                                currentMessage.length(),
-                                tcpReceiverBufferSpinner.getValue(),
-                                0,
-                                tcpReceiverBufferSpinner.getValue()
-                        ));
+                        slidingWindowPanel.update(initialFlow);
                     }
+                    updateReceiverBufferGraphic(initialFlow);
                     if (congestionPanel != null) {
                         congestionPanel.reset();
                     }

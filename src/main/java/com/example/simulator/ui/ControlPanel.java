@@ -90,33 +90,39 @@ public class ControlPanel extends VBox {
 
         stepIndicatorLabel.setStyle("-fx-text-fill: #334155; -fx-font-weight: bold;");
 
-        DashboardCard scenarioCard = new DashboardCard("CONFIGURACIÓN", "Escenario y protocolo", "Define el contexto base de la simulación.");
+        DashboardCard scenarioCard = new DashboardCard(null, "Configuración", null);
         scenarioCard.setContent(fieldGrid(
                 field("Escenario", scenarioSelector),
                 field("Protocolo", protocolSelector),
                 field("Mensaje", messageField)
         ));
 
-        DashboardCard networkCard = new DashboardCard("RED", "Condiciones de red", "Manipula el comportamiento observable de la red compartida.");
+        DashboardCard networkCard = new DashboardCard(null, "Condiciones de red", null);
         networkCard.setContent(fieldGrid(
                 field("Pérdida (%)", lossSlider),
                 field("Latencia", latencySlider),
                 field("Jitter", jitterSlider),
                 field("Duplicación", duplicationSlider),
                 field("Reordenación", reorderingSlider),
-                field("Bandwidth", bandwidthSpinner),
+                field("Bandwidth", bandwidthSpinner)
+        ));
+
+        DashboardCard tcpCard = new DashboardCard(null, "Parámetros TCP", null);
+        tcpCard.setContent(fieldGrid(
                 field("Tamaño de ventana", tcpWindowSizeSpinner),
                 field("Buffer de recepción", tcpReceiverBufferSpinner),
                 field("Fragmento", fragmentSizeSpinner)
         ));
 
-        DashboardCard visualCard = new DashboardCard("VISUALIZACIÓN", "Reproducción", "Ajustes de lectura y ritmo de la demo.");
-        visualCard.setContent(fieldGrid(field("Velocidad", speedSlider)));
+        DashboardCard visualCard = new DashboardCard(null, "Visualización", null);
+        runButton.setMaxWidth(Double.MAX_VALUE);
+        runButton.setPrefWidth(260);
+        VBox visualContent = new VBox(14, fieldGrid(field("Velocidad", speedSlider)), runButton);
+        visualCard.setContent(visualContent);
 
-        FlowPane primaryActions = new FlowPane(10, 10, runButton, playPauseButton, liveStepButton, resetButton);
+        FlowPane primaryActions = new FlowPane(10, 10, playPauseButton, liveStepButton, resetButton);
         primaryActions.setAlignment(Pos.CENTER_LEFT);
         primaryActions.setPrefWrapLength(320);
-        runButton.setPrefWidth(190);
         playPauseButton.setPrefWidth(118);
         liveStepButton.setPrefWidth(94);
         resetButton.setPrefWidth(118);
@@ -136,16 +142,16 @@ public class ControlPanel extends VBox {
         );
         actionsCard.setContent(actionsContent);
 
-        FlowPane cards = new FlowPane(18, 18, scenarioCard, networkCard, visualCard, actionsCard);
-        cards.setAlignment(Pos.TOP_LEFT);
-        cards.setPrefWrapLength(1450);
-        scenarioCard.setPrefWidth(320);
-        networkCard.setPrefWidth(470);
-        visualCard.setPrefWidth(260);
-        actionsCard.setPrefWidth(320);
+        for (DashboardCard card : List.of(scenarioCard, networkCard, tcpCard, visualCard, actionsCard)) {
+            card.setStyle(htmlCardStyle());
+            card.setPrefWidth(300);
+            card.setMaxWidth(Double.MAX_VALUE);
+        }
 
-        setSpacing(18);
-        getChildren().add(cards);
+        setSpacing(10);
+        setPrefWidth(300);
+        setMaxWidth(300);
+        getChildren().addAll(scenarioCard, networkCard, tcpCard, visualCard, actionsCard);
     }
 
     public void hideActionsSection() {
@@ -220,14 +226,18 @@ public class ControlPanel extends VBox {
 
     private FieldEntry field(String label, Node node) {
         if (node instanceof TextField textField) {
-            textField.setStyle(UiTheme.BODY
-                    + "-fx-background-radius: 12; -fx-border-radius: 12; -fx-border-color: #d5e0ea;"
+            textField.setStyle("-fx-font-size: 13px; -fx-text-fill: #102a43;"
+                    + "-fx-background-radius: 10; -fx-border-radius: 10; -fx-border-color: #d9e5f2;"
                     + "-fx-background-color: white; -fx-padding: 10 12 10 12;");
         } else if (node instanceof ComboBox<?> comboBox) {
-            comboBox.setStyle(UiTheme.BODY + "-fx-background-radius: 12; -fx-border-radius: 12; -fx-padding: 4 6 4 6;");
+            comboBox.setStyle("-fx-font-size: 13px; -fx-text-fill: #102a43;"
+                    + "-fx-background-color: #ffffff; -fx-background-radius: 10; -fx-border-radius: 10;"
+                    + "-fx-border-color: #d9e5f2; -fx-padding: 4 6 4 6;");
             comboBox.setMaxWidth(Double.MAX_VALUE);
         } else if (node instanceof Spinner<?> spinner) {
-            spinner.setStyle(UiTheme.BODY + "-fx-background-radius: 12; -fx-border-radius: 12;");
+            spinner.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #334e68;"
+                    + "-fx-background-color: #f8fbff; -fx-background-radius: 8; -fx-border-radius: 8;"
+                    + "-fx-border-color: #d9e5f2;");
             spinner.setMaxWidth(Double.MAX_VALUE);
         } else if (node instanceof Slider slider) {
             Label valueLabel = new Label(formatSliderValue(label, slider.getValue()));
@@ -276,6 +286,15 @@ public class ControlPanel extends VBox {
     }
 
     private record FieldEntry(String label, Node node) {
+    }
+
+    private String htmlCardStyle() {
+        return "-fx-background-color: #ffffff;"
+                + "-fx-background-radius: 16;"
+                + "-fx-border-radius: 16;"
+                + "-fx-border-color: #d9e5f2;"
+                + "-fx-border-width: 1;"
+                + "-fx-effect: dropshadow(gaussian, rgba(16,42,67,0.07), 30, 0.20, 0, 10);";
     }
 
     public ComboBox<SimulationMode> getModeSelector() {

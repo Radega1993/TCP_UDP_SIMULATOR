@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulador TCP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <button class="icon-button" aria-label="Abrir menú">☰</button>
+        <span>Simulador visual de TCP y UDP</span>
+      </div>
+
+      <div class="protocol-badge">⌁ TCP activo</div>
+
+      <nav class="actions" aria-label="Acciones de simulación">
+        <button class="ghost-button">↻ Reiniciar</button>
+        <button class="ghost-button">Ⅱ Pausar</button>
+        <button class="ghost-button">▷ Paso a paso</button>
+        <div class="speed-control">
+          <span>Velocidad</span>
+          <select aria-label="Velocidad">
+            <option>1.0x</option>
+            <option>1.5x</option>
+            <option>2.0x</option>
+            <option>3.0x</option>
+          </select>
+        </div>
+      </nav>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <section class="card compact-card">
+          <h2>Configuración</h2>
+          <label for="scenario">Escenario</label>
+          <select id="scenario"><option>Personalizado</option></select>
+
+          <label>Protocolo</label>
+          <div class="segmented" role="group" aria-label="Protocolo">
+            <button class="active">TCP</button>
+            <button>UDP</button>
+          </div>
+
+          <label for="message">Mensaje</label>
+          <input id="message" value="HOLAALUMNOS" />
+        </section>
+
+        <section class="card compact-card">
+          <h2>Condiciones de red</h2>
+          <div class="slider-row"><span>Pérdida (%)</span><input type="range" value="20" /><strong>20 %</strong></div>
+          <div class="slider-row"><span>Latencia</span><input type="range" value="55" /><strong>1200 ms</strong></div>
+          <div class="slider-row"><span>Jitter</span><input type="range" value="0" /><strong>0 ms</strong></div>
+          <div class="slider-row"><span>Duplicación</span><input type="range" value="0" /><strong>0 %</strong></div>
+          <div class="slider-row"><span>Reordenación</span><input type="range" value="0" /><strong>0 %</strong></div>
+          <div class="slider-row"><span>Bandwidth</span><input type="range" value="0" /><strong>0</strong></div>
+          <small class="muted">0 = sin límite</small>
+        </section>
+
+        <section class="card compact-card">
+          <h2>Parámetros TCP</h2>
+          <div class="field-row"><span>Tamaño de ventana</span><strong>24 bytes</strong></div>
+          <div class="field-row"><span>Buffer de recepción</span><strong>24 bytes</strong></div>
+          <div class="field-row"><span>Fragmento</span><strong>8 bytes</strong></div>
+        </section>
+
+        <section class="card compact-card">
+          <h2>Visualización</h2>
+          <div class="slider-row"><span>Velocidad</span><input type="range" value="35" /><strong>1.0x</strong></div>
+          <label>Vista</label>
+          <div class="segmented" role="group" aria-label="Vista">
+            <button class="active">Diagrama</button>
+            <button>Escena</button>
+          </div>
+          <button class="primary-button">▷ Iniciar simulación</button>
+        </section>
+      </aside>
+
+      <section class="content">
+        <section class="card diagram-card">
+          <div class="section-header">
+            <div>
+              <h2>Diagrama temporal</h2>
+              <p>Intercambio ordenado de mensajes entre cliente y servidor</p>
+            </div>
+            <label class="check-label"><input type="checkbox" checked /> Mostrar números relativos</label>
+          </div>
+
+          <div class="timeline">
+            <div class="time-column">
+              <span>Tiempo</span>
+              <b>00.000</b><b>00.120</b><b>00.240</b><b>01.450</b><b>01.570</b><b>01.690</b><b>02.800</b><b>02.920</b><b>03.040</b>
+            </div>
+
+            <div class="endpoint endpoint-left">
+              <div class="endpoint-icon">▣</div>
+              <h3>Cliente</h3>
+              <span class="state state-blue">CLOSED</span>
+              <span class="state state-yellow">SYN_SENT</span>
+              <span class="state state-green">ESTABLISHED</span>
+              <span class="state state-blue bottom-state">TIME_WAIT</span>
+            </div>
+
+            <div class="message-flow">
+              <div class="flow-line right"><span>SYN</span><em>Seq=1000</em></div>
+              <div class="flow-line left green"><span>SYN-ACK</span><em>Seq=5000 · Ack=1001</em></div>
+              <div class="flow-line right"><span>ACK</span><em>Ack=5001</em></div>
+              <div class="timeline-separator">CONEXIÓN ESTABLECIDA</div>
+              <div class="flow-line right"><span>DATA</span><em>Seq=1001 · Len=8 · [HOLAALUM]</em></div>
+              <div class="flow-line left green"><span>ACK</span><em>Ack=1009 · Win=16</em></div>
+              <div class="flow-line right"><span>DATA</span><em>Seq=1009 · Len=3 · [NOS]</em></div>
+              <div class="flow-line left green"><span>ACK</span><em>Ack=1012 · Win=16</em></div>
+              <div class="timeline-separator">ENTREGA COMPLETADA</div>
+              <div class="flow-line right"><span>FIN</span><em>Seq=1012</em></div>
+              <div class="flow-line left green"><span>ACK</span><em>Ack=1013</em></div>
+            </div>
+
+            <div class="endpoint endpoint-right">
+              <div class="endpoint-icon server-icon">▤</div>
+              <h3>Servidor</h3>
+              <span class="state state-blue">CLOSED</span>
+              <span class="state state-yellow">LISTEN</span>
+              <span class="state state-yellow">SYN_RECEIVED</span>
+              <span class="state state-green">ESTABLISHED</span>
+              <span class="state state-yellow bottom-state">LAST_ACK</span>
+            </div>
+          </div>
+        </section>
+
+        <div class="metric-grid">
+          <section class="card metric-card">
+            <h2>Ventana deslizante <span>(Cliente)</span></h2>
+            <div class="byte-scale"><span>1000</span><span>1001</span><span>1002</span><span>1003</span><span>1004</span><span>1005</span><span>1006</span><span>1007</span><span>1008</span><span>1009</span><span>1010</span><span>1011</span></div>
+            <div class="byte-row"><i class="ack"></i><i class="ack"></i><i class="ack"></i><i class="ack"></i><i class="sent"></i><i class="sent"></i><i class="sent"></i><i class="sent"></i><i class="sent"></i><i class="empty"></i><i class="empty"></i><i class="empty"></i></div>
+            <div class="legend-inline"><span><i class="ack"></i> Enviado y ACKeado</span><span><i class="sent"></i> Esperando ACK</span><span><i class="empty"></i> Pendiente</span></div>
+            <p>Ventana efectiva: <strong>0 - 24</strong> <span>|</span> Bytes en vuelo: <strong>0</strong> <span>|</span> Siguiente Seq: <strong>1012</strong></p>
+          </section>
+
+          <section class="card metric-card">
+            <h2>Buffer de recepción <span>(Servidor)</span></h2>
+            <div class="byte-row buffer-row"><i class="ack"></i><i class="ack"></i><i class="ack"></i><i class="empty"></i><i class="empty"></i><i class="empty"></i><i class="empty"></i><i class="empty"></i><i class="empty"></i><i class="empty"></i></div>
+            <div class="legend-inline"><span><i class="ack"></i> Datos recibidos</span><span><i class="empty"></i> Espacio libre</span></div>
+            <p>Buffer: <strong>8 / 24 bytes</strong> <span>(16 bytes libres)</span><br />Ventana anunciada: <strong>16 bytes</strong></p>
+          </section>
+
+          <section class="card metric-card">
+            <h2>Control de congestión <span>(Cliente)</span></h2>
+            <div class="chart">
+              <svg viewBox="0 0 440 160" aria-hidden="true">
+                <defs>
+                  <linearGradient id="lineGlow" x1="0" x2="1"><stop stop-color="#2f80ed"/><stop offset="1" stop-color="#4f8ef7"/></linearGradient>
+                </defs>
+                <path class="grid" d="M0 130H440M0 95H440M0 60H440M0 25H440" />
+                <polyline points="0,130 40,95 80,95 120,60 160,25 200,25 240,95 280,95 320,95 360,60 400,130 440,130" />
+                <line x1="0" y1="25" x2="440" y2="25" />
+              </svg>
+            </div>
+            <p>Fase actual: <strong>Congestion Avoidance</strong></p>
+          </section>
+
+          <section class="card metric-card">
+            <h2>Paquetes en tránsito</h2>
+            <div class="transit-line">
+              <span class="device">▣<small>Cliente</small></span>
+              <span class="cloud">☁</span>
+              <span class="device">▤<small>Servidor</small></span>
+            </div>
+            <p>0 paquetes en tránsito</p>
+            <div class="network-stats"><span>Latencia actual: <strong>1200 ms</strong></span><span>Jitter: <strong>0 ms</strong></span><span>Pérdida: <strong>20%</strong></span></div>
+          </section>
+        </div>
+      </section>
+
+      <aside class="rightbar">
+        <section class="card state-card">
+          <h2>Estado de la conexión</h2>
+          <div class="state-columns">
+            <div>
+              <h3>Cliente</h3>
+              <span class="pill">ESTABLISHED</span>
+              <dl><dt>Seq. siguiente</dt><dd>1012</dd><dt>Ack. siguiente</dt><dd>5001</dd><dt>Ventana de envío</dt><dd>24 bytes</dd><dt>Bytes en vuelo</dt><dd>0 bytes</dd><dt>cwnd</dt><dd>32 bytes</dd><dt>ssthresh</dt><dd>64 bytes</dd><dt>Fase</dt><dd>Congestion Avoidance</dd></dl>
+            </div>
+            <div>
+              <h3>Servidor</h3>
+              <span class="pill">ESTABLISHED</span>
+              <dl><dt>Seq. siguiente</dt><dd>5001</dd><dt>Ack. siguiente</dt><dd>1012</dd><dt>Ventana anunciada</dt><dd>16 bytes</dd><dt>Buffer disponible</dt><dd>16 / 24 bytes</dd><dt>Bytes recibidos</dt><dd>12 / 12</dd></dl>
+              <div class="progress"><span style="width:33%"></span></div><small>Estado del buffer: 33%</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="card event-card">
+          <div class="section-header small-header">
+            <div><h2>Eventos (log)</h2></div>
+            <div class="tiny-actions">⌕ ⋮</div>
+          </div>
+          <div class="filters"><span class="filter active">✓ Todos</span><span class="filter green">12 Envío</span><span class="filter blue">4 ACK</span><span class="filter red">1 Pérdida</span><span class="filter orange">2 Retrans.</span></div>
+          <table class="event-table">
+            <thead><tr><th>Tiempo</th><th>Evento</th><th>Detalles</th></tr></thead>
+            <tbody>
+              <tr><td>00.000</td><td>→ SYN</td><td>Seq=1000</td></tr>
+              <tr><td>00.120</td><td>← SYN-ACK</td><td>Seq=5000 · Ack=1001</td></tr>
+              <tr><td>00.240</td><td>→ ACK</td><td>Ack=5001</td></tr>
+              <tr><td>01.450</td><td>→ DATA</td><td>Seq=1001 · [HOLAALUM]</td></tr>
+              <tr><td>01.570</td><td>← ACK</td><td>Ack=1009</td></tr>
+              <tr><td>01.690</td><td>→ DATA</td><td>Seq=1009 · [NOS]</td></tr>
+              <tr><td>02.800</td><td>→ FIN</td><td>Seq=1012</td></tr>
+              <tr><td>03.040</td><td>← FIN</td><td>Seq=5001</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="success-card">
+          <div class="success-icon">✓</div>
+          <div><strong>Simulación completada</strong><span>El mensaje se entregó correctamente.</span><span>Mensaje recibido: <b>HOLAALUMNOS</b></span></div>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="legend">
+      <span><i class="legend-icon syn">↗</i><b>SYN</b> Inicio de conexión</span>
+      <span><i class="legend-icon synack">↙</i><b>SYN-ACK</b> Respuesta del servidor</span>
+      <span><i class="legend-icon ack">↔</i><b>ACK</b> Confirmación</span>
+      <span><i class="legend-icon data">▣</i><b>DATA</b> Datos de aplicación</span>
+      <span><i class="legend-icon fin">↯</i><b>FIN</b> Cierre</span>
+      <span><i class="legend-icon lost">✖</i><b>Pérdida</b> Paquete perdido</span>
+      <span><i class="legend-icon retry">↻</i><b>Retrans.</b> Retransmisión</span>
+      <div class="legend-tip">ⓘ Los ACK son acumulativos: indican el siguiente byte esperado.</div>
+    </footer>
+  </div>
+</body>
+</html>

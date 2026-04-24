@@ -18,27 +18,24 @@ import java.util.List;
 
 public class CwndChartPanel extends VBox {
     private static final double PLOT_WIDTH = 240;
-    private static final double PLOT_HEIGHT = 150;
+    private static final double PLOT_HEIGHT = 44;
     private final Pane plotPane = new Pane();
     private List<CwndHistoryPoint> history = List.of();
 
     public CwndChartPanel() {
-        setSpacing(8);
-        setPadding(new Insets(8));
+        setSpacing(3);
+        setPadding(new Insets(3));
         setStyle(UiTheme.PANEL_INSET);
 
         Label title = new Label("Evolución de cwnd");
         title.setStyle(UiTheme.FIELD_LABEL);
-
-        Label caption = new Label("Tiempo / step");
-        caption.setStyle("-fx-font-size: 11px; -fx-text-fill: #617487;");
 
         plotPane.setPrefSize(PLOT_WIDTH, PLOT_HEIGHT);
         plotPane.setMinSize(PLOT_WIDTH, PLOT_HEIGHT);
         plotPane.setMaxSize(PLOT_WIDTH, PLOT_HEIGHT);
         plotPane.setStyle("-fx-background-color: #fbfdff; -fx-background-radius: 12; -fx-border-color: #dfe7ef; -fx-border-radius: 12;");
 
-        getChildren().addAll(title, plotPane, caption);
+        getChildren().addAll(title, plotPane);
         render();
     }
 
@@ -60,8 +57,8 @@ public class CwndChartPanel extends VBox {
 
         double left = 28;
         double right = PLOT_WIDTH - 12;
-        double bottom = PLOT_HEIGHT - 24;
-        double top = 12;
+        double bottom = PLOT_HEIGHT - 10;
+        double top = 8;
         int maxCwnd = history.stream().mapToInt(CwndHistoryPoint::getCwndBytes).max().orElse(1);
         maxCwnd = Math.max(4, maxCwnd);
 
@@ -91,8 +88,8 @@ public class CwndChartPanel extends VBox {
     private void drawGrid() {
         double left = 28;
         double right = PLOT_WIDTH - 12;
-        double bottom = PLOT_HEIGHT - 24;
-        double top = 12;
+        double bottom = PLOT_HEIGHT - 10;
+        double top = 8;
 
         for (int i = 0; i < 4; i++) {
             double y = top + ((bottom - top) * i / 3.0);

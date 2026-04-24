@@ -18,42 +18,55 @@ public class SequenceDiagramView extends VBox {
     private static final double WIDTH = 560;
     private static final double LEFT_X = 110;
     private static final double RIGHT_X = 430;
-    private final Label titleLabel = new Label("Diagrama secuencial");
+    private static final double VIEWPORT_HEIGHT = 390;
+    private static final double EVENT_TOP = 12;
+    private static final double EVENT_GAP = 31;
     private final Pane contentPane = new Pane();
     private final ScrollPane scrollPane = new ScrollPane(contentPane);
     private final Map<String, SequenceDiagramEventViewModel> events = new LinkedHashMap<>();
     private final Consumer<String> detailsOpener;
-    private String helpText = "Esta vista representa la comunicación como una secuencia temporal entre cliente y servidor. Es especialmente útil para analizar handshake, ACK, retransmisiones, orden de llegada y control de flujo.";
 
     public SequenceDiagramView(String title, Consumer<String> detailsOpener) {
         this.detailsOpener = detailsOpener;
-        setSpacing(10);
-        setPadding(new Insets(8));
-        setStyle(UiTheme.PANEL_INSET_TINT);
-
-        titleLabel.setText(title);
-        titleLabel.setStyle(UiTheme.TITLE);
-
-        Label help = new Label(helpText);
-        help.setWrapText(true);
-        help.setStyle(UiTheme.SUBTITLE);
+        setSpacing(8);
+        setPadding(new Insets(6, 0, 0, 0));
+        setAlignment(Pos.TOP_CENTER);
+        setStyle("-fx-background-color: transparent;");
+        setMinHeight(424);
+        setPrefHeight(424);
+        setMaxHeight(424);
 
         HBoxLike header = new HBoxLike();
-        header.add(new LifelineHeader("Cliente"), LEFT_X - 48);
-        header.add(new LifelineHeader("Servidor"), RIGHT_X - 52);
+        header.addCentered(new LifelineHeader("Cliente"), LEFT_X, 96);
+        header.addCentered(new LifelineHeader("Servidor"), RIGHT_X, 104);
 
         contentPane.setPrefWidth(WIDTH);
         contentPane.setMinWidth(WIDTH);
         contentPane.setMaxWidth(WIDTH);
-        contentPane.setStyle("-fx-background-color: #fbfdff; -fx-background-radius: 14;");
+        contentPane.setPrefHeight(VIEWPORT_HEIGHT);
+        contentPane.setMinHeight(VIEWPORT_HEIGHT);
+        contentPane.setStyle("-fx-background-color: #fbfdff;");
 
-        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToWidth(false);
+        scrollPane.setFitToHeight(false);
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scrollPane.setPrefViewportHeight(320);
-        scrollPane.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+        scrollPane.setMinWidth(WIDTH);
+        scrollPane.setPrefWidth(WIDTH);
+        scrollPane.setMaxWidth(WIDTH);
+        scrollPane.setPrefViewportWidth(WIDTH);
+        scrollPane.setPrefViewportHeight(VIEWPORT_HEIGHT);
+        scrollPane.setMinViewportHeight(VIEWPORT_HEIGHT);
+        scrollPane.setMaxHeight(VIEWPORT_HEIGHT);
+        scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
 
-        getChildren().addAll(titleLabel, help, header, scrollPane);
+        VBox diagramBody = new VBox(0, header, scrollPane);
+        diagramBody.setAlignment(Pos.TOP_CENTER);
+        diagramBody.setMinWidth(WIDTH);
+        diagramBody.setPrefWidth(WIDTH);
+        diagramBody.setMaxWidth(WIDTH);
+
+        getChildren().add(diagramBody);
         redraw();
     }
 
@@ -99,12 +112,15 @@ public class SequenceDiagramView extends VBox {
 
     private void redraw() {
         contentPane.getChildren().clear();
-        double totalHeight = Math.max(280, 70 + (events.size() * 48));
+        int visibleEvents = events.size();
+        double totalHeight = Math.max(VIEWPORT_HEIGHT, 32 + (visibleEvents * EVENT_GAP));
+        contentPane.setPrefHeight(totalHeight);
+        contentPane.setMinHeight(totalHeight);
 
-        Line leftLine = new Line(LEFT_X, 18, LEFT_X, totalHeight - 16);
+        Line leftLine = new Line(LEFT_X, 8, LEFT_X, totalHeight - 12);
         leftLine.setStroke(Color.web("#cfd9e5"));
         leftLine.getStrokeDashArray().addAll(7.0, 6.0);
-        Line rightLine = new Line(RIGHT_X, 18, RIGHT_X, totalHeight - 16);
+        Line rightLine = new Line(RIGHT_X, 8, RIGHT_X, totalHeight - 12);
         rightLine.setStroke(Color.web("#cfd9e5"));
         rightLine.getStrokeDashArray().addAll(7.0, 6.0);
         contentPane.getChildren().addAll(leftLine, rightLine);
@@ -113,11 +129,10 @@ public class SequenceDiagramView extends VBox {
         for (SequenceDiagramEventViewModel model : events.values()) {
             SequenceDiagramMessageNode node = new SequenceDiagramMessageNode(model, detailsOpener);
             node.setLayoutX(0);
-            node.setLayoutY(28 + (index * 48));
+            node.setLayoutY(EVENT_TOP + (index * EVENT_GAP));
             contentPane.getChildren().add(node);
             index++;
         }
-        contentPane.setPrefHeight(totalHeight);
     }
 
     private static class LifelineHeader extends Label {
@@ -135,8 +150,12 @@ public class SequenceDiagramView extends VBox {
             setPrefHeight(26);
         }
 
-        private void add(Label label, double x) {
-            label.setLayoutX(x);
+        private void addCentered(Label label, double centerX, double width) {
+            label.setAlignment(Pos.CENTER);
+            label.setPrefWidth(width);
+            label.setMinWidth(width);
+            label.setMaxWidth(width);
+            label.setLayoutX(centerX - (width / 2.0));
             label.setLayoutY(0);
             getChildren().add(label);
         }

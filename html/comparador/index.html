@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comparación TCP vs UDP</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><button class="icon-button">☰</button><strong>Simulador visual de TCP y UDP</strong></div>
+    <div class="mode-pill">Comparación: TCP vs UDP</div>
+    <div class="run-pill">✦ Simulación en ejecución</div>
+    <div class="actions">
+      <button>↻ Reiniciar</button><button>Ⅱ Pausar</button><button>▷ Paso a paso</button><button class="small">Velocidad</button>
+      <select><option>1.0x</option><option>1.5x</option><option>2.0x</option></select>
+    </div>
+  </header>
+
+  <main class="app-grid">
+    <aside class="left-panel">
+      <section class="card"><h3>Configuración común</h3><label>Escenario</label><select><option>Personalizado</option></select><label>Mensaje <span>(mismo para ambos)</span></label><input value="HOLAALUMNOS" /></section>
+      <section class="card"><h3>Condiciones de red <span>(iguales)</span></h3>
+        <div class="slider-row"><span>Pérdida (%)</span><input type="range" value="30" /><strong>30 %</strong></div>
+        <div class="slider-row"><span>Latencia</span><input type="range" value="45" /><strong>1200 ms</strong></div>
+        <div class="slider-row"><span>Jitter</span><input type="range" value="18" /><strong>100 ms</strong></div>
+        <div class="slider-row"><span>Duplicación (%)</span><input type="range" value="0" /><strong>0 %</strong></div>
+        <div class="slider-row"><span>Reordenación (%)</span><input type="range" value="20" /><strong>20 %</strong></div>
+        <div class="slider-row"><span>Bandwidth</span><input type="range" value="0" /><strong>0</strong></div><small>0 = sin límite</small>
+      </section>
+      <section class="card"><h3>Parámetros TCP</h3>
+        <div class="slider-row compact"><span>Tamaño ventana</span><input type="range" value="24" /><strong>24 bytes</strong></div>
+        <div class="slider-row compact"><span>Buffer recepción</span><input type="range" value="24" /><strong>24 bytes</strong></div>
+        <div class="slider-row compact"><span>Fragmento</span><input type="range" value="8" /><strong>8 bytes</strong></div>
+      </section>
+      <section class="card visual-card"><h3>Visualización</h3><label>Vista</label><div class="segmented"><button class="active">Diagrama</button><button>Resumen</button></div><button class="danger">■ Detener simulación</button></section>
+    </aside>
+
+    <section class="main-panel">
+      <section class="card comparison-card">
+        <div class="comparison-title"><h3>Comparación en tiempo real <span>ⓘ</span></h3><div class="time-box"><span>Tiempo actual</span><strong>18.450 s</strong></div></div>
+        <div class="protocol-summary"><div class="proto tcp"><div class="proto-title"><span class="circle-icon">⇄</span><h2>TCP</h2></div><p>Estado: <strong>ESTABLISHED</strong></p><p>Entregados: <b>11 / 12 bytes (91.7%)</b></p><p>Pérdidas: <b>2</b></p><p>Retransmisiones: <b>2</b></p></div><div class="proto udp"><div class="proto-title"><span class="circle-icon">✈</span><h2>UDP</h2></div><p>Estado: <strong>SIN CONEXIÓN</strong></p><p>Entregados: <b>6 / 12 bytes (50.0%)</b></p><p>Pérdidas: <b>6</b></p><p>Retransmisiones: <b>0</b></p></div></div>
+        <div class="sequence">
+          <div class="time-col"><span>Tiempo</span><b>00.000</b><b>00.120</b><b>00.240</b><b>00.600</b><b>01.200</b><b>02.450</b><b>03.120</b><b>04.200</b><b>...</b><b>18.450</b></div>
+          <div class="state-col"><span class="state yellow">SYN_SENT</span><span class="state green">ESTABLISHED</span><span class="state orange">DATA_SENT</span><span class="state red">TIMEOUT</span><span class="state amber">RETRANS.</span><span class="state amber">FIN_WAIT_1</span><span class="state blue">TIME_WAIT</span><span class="state gray">CLOSED</span></div>
+          <div class="tcp-lane"><div class="lane-title">Cliente</div><div class="lane-title right">TCP (confiable)</div><div class="lifeline left"></div><div class="lifeline right"></div><div class="arrow tcp-send y1">SYN <small>Seq=1000</small></div><div class="arrow tcp-return y2">SYN-ACK <small>Seq=5000 Ack=1001</small></div><div class="arrow tcp-send y3">ACK <small>Ack=5001</small></div><div class="separator y4">CONEXIÓN ESTABLECIDA</div><div class="arrow tcp-send y5">DATA <small>Seq=1001 Len=8 [HOLAALUM]</small></div><div class="arrow tcp-return y6">ACK <small>Ack=1009 Win=16</small></div><div class="arrow tcp-send y7">DATA <small>Seq=1009 Len=3 [NOS]</small></div><div class="arrow tcp-loss y8">DATA <small>Seq=1001 Retransmisión</small></div><div class="arrow tcp-return y9">ACK <small>Ack=1012 Win=16</small></div><div class="separator y10">ENTREGA COMPLETADA</div><div class="arrow tcp-send y11">FIN <small>Seq=1012</small></div><div class="arrow tcp-return y12">ACK <small>Ack=1013</small></div></div>
+          <div class="udp-lane"><div class="lane-title">UDP (no confiable)</div><div class="lane-title right">Servidor</div><div class="lifeline left"></div><div class="lifeline right"></div><div class="arrow udp-send y1">DATA <small>Seq=1000 Len=8 [HOLAALUM]</small></div><div class="arrow udp-loss y2">✖ PÉRDIDA</div><div class="arrow udp-send y4">DATA <small>Seq=1008 Len=3 [NOS]</small></div><div class="arrow udp-loss y5">✖ PÉRDIDA</div><div class="arrow udp-send y7">DATA <small>Seq=1011 Len=1 [S]</small></div><div class="arrow udp-loss y8">✖ PÉRDIDA</div><div class="arrow udp-send y10">DATA <small>Seq=1012 Len=1 [O]</small></div><div class="arrow udp-loss y12">✖ PÉRDIDA</div><div class="packet-stack"><span></span><span></span><span class="ok"></span><span></span><span></span><span></span><span class="ok"></span><span class="ok"></span><span></span><span></span></div></div>
+        </div>
+      </section>
+      <section class="metric-row"><article class="metric-card"><span>Entregados</span><strong>11 / 12 bytes</strong><em>91.7%</em><div class="bar"><i style="width:91.7%"></i></div></article><article class="metric-card"><span>Pérdidas</span><strong>2</strong><em class="red-text">16.7%</em><div class="bar red"><i style="width:16.7%"></i></div></article><article class="metric-card"><span>Retransmisiones</span><strong>2</strong><em class="green-text">2.1%</em><div class="bar green"><i style="width:22%"></i></div></article><article class="metric-card"><span>Tiempo entrega</span><strong>18.450 s</strong></article><article class="metric-card"><span>Entregados</span><strong>6 / 12 bytes</strong><em>50.0%</em><div class="bar purple"><i style="width:50%"></i></div></article><article class="metric-card"><span>Pérdidas</span><strong>6</strong><em class="red-text">50.0%</em><div class="bar red"><i style="width:50%"></i></div></article><article class="metric-card"><span>Retransmisiones</span><strong>0</strong><em>0%</em><div class="bar gray"><i style="width:0%"></i></div></article><article class="metric-card"><span>Tiempo entrega</span><strong>3.120 s</strong></article></section>
+      <section class="charts-grid"><article class="card mini-chart"><h3>Ventana TCP <span>(bytes)</span></h3><svg viewBox="0 0 240 110"><polyline class="blue-line" points="0,90 25,78 45,82 70,62 95,30 120,72 145,66 170,70 190,90 220,58 240,58" /><line class="orange-line" x1="0" y1="36" x2="240" y2="36" /></svg></article><article class="card mini-chart"><h3>Bytes en vuelo <span>(TCP)</span></h3><svg viewBox="0 0 240 110"><polyline class="blue-line" points="0,96 25,70 50,35 75,26 100,28 130,82 160,86 190,82 220,55 240,70" /></svg></article><article class="card mini-chart"><h3>Ritmo de envío <span>(paquetes/s)</span></h3><svg viewBox="0 0 240 110"><polyline class="blue-line" points="0,95 35,88 70,82 105,92 140,80 180,90 220,86 240,96" /><polyline class="purple-line" points="0,95 30,70 60,65 95,90 125,35 150,88 180,58 210,68 240,84" /></svg></article><article class="card mini-chart"><h3>Pérdidas <span>(acumuladas)</span></h3><svg viewBox="0 0 240 110"><polyline class="red-line" points="0,100 50,96 90,92 130,90 170,88 210,82 240,72" /><polyline class="purple-line" points="0,100 30,98 60,80 90,72 120,60 150,50 180,45 210,30 240,20" /></svg></article></section>
+    </section>
+
+    <aside class="right-panel">
+      <section class="card message-card"><h3>Comparación de mensajes</h3><div class="message-grid"><article><h4>TCP <span>(recibido)</span></h4><div class="message-ok">✓ HOLAALUMNOS</div><p>12 / 12 bytes</p><p>100% completo</p><div class="bar green"><i style="width:100%"></i></div></article><article><h4>UDP <span>(recibido)</span></h4><div class="message-warn">⚙ H_LA_UN_S</div><p>6 / 12 bytes</p><p>50% completo</p><div class="bar orange"><i style="width:50%"></i></div></article></div></section>
+      <section class="card log-card"><h3>Eventos (log)</h3><div class="filters"><button class="active">✓ Todos</button><button>⇄ TCP</button><button>✈ UDP</button><button class="loss">✕ Pérdida</button></div><table><thead><tr><th>Tiempo</th><th>Protocolo</th><th>Evento</th><th>Detalles</th></tr></thead><tbody><tr><td>00.000</td><td>TCP</td><td>SYN</td><td>Seq=1000</td></tr><tr><td>00.000</td><td>UDP</td><td>DATA</td><td>Len=8</td></tr><tr><td>00.120</td><td>TCP</td><td>SYN-ACK</td><td>Ack=1001</td></tr><tr><td>00.120</td><td>UDP</td><td>PÉRDIDA</td><td>Seq=1000</td></tr><tr><td>00.240</td><td>TCP</td><td>ACK</td><td>Ack=5001</td></tr><tr><td>00.600</td><td>TCP</td><td>DATA</td><td>HOLAALUM</td></tr><tr><td>00.600</td><td>UDP</td><td>DATA</td><td>NOS</td></tr><tr><td>01.200</td><td>TCP</td><td>ACK</td><td>Ack=1009</td></tr><tr><td>02.450</td><td>TCP</td><td>TIMEOUT</td><td>Seq=1001</td></tr><tr><td>02.450</td><td>TCP</td><td>RETRANS.</td><td>Seq=1001</td></tr><tr><td>03.120</td><td>UDP</td><td>DATA</td><td>Len=1</td></tr></tbody></table><a>Ver más eventos...</a></section>
+      <section class="success-card"><div class="check">✓</div><div><strong>Simulación en curso</strong><p>TCP se recupera de pérdidas y entrega el mensaje completo. UDP muestra simplicidad pero con pérdida de datos.</p></div></section>
+    </aside>
+  </main>
+
+  <footer class="legend"><strong>Leyenda</strong><span>→ Envío</span><span>← Respuesta</span><span>↔ ACK</span><span>▣ DATA</span><span>⚡ FIN</span><span>✖ Pérdida</span><span>↻ Retransmisión</span><span class="note">ⓘ Ambas simulaciones usan las mismas condiciones de red.</span></footer>
+</body>
+</html>
