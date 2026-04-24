@@ -25,6 +25,7 @@ public class SequenceDiagramView extends VBox {
     private final ScrollPane scrollPane = new ScrollPane(contentPane);
     private final Map<String, SequenceDiagramEventViewModel> events = new LinkedHashMap<>();
     private final Consumer<String> detailsOpener;
+    private double viewportHeight = VIEWPORT_HEIGHT;
 
     public SequenceDiagramView(String title, Consumer<String> detailsOpener) {
         this.detailsOpener = detailsOpener;
@@ -32,9 +33,7 @@ public class SequenceDiagramView extends VBox {
         setPadding(new Insets(6, 0, 0, 0));
         setAlignment(Pos.TOP_CENTER);
         setStyle("-fx-background-color: transparent;");
-        setMinHeight(424);
-        setPrefHeight(424);
-        setMaxHeight(424);
+        setViewportHeight(VIEWPORT_HEIGHT);
 
         HBoxLike header = new HBoxLike();
         header.addCentered(new LifelineHeader("Cliente"), LEFT_X, 96);
@@ -43,8 +42,8 @@ public class SequenceDiagramView extends VBox {
         contentPane.setPrefWidth(WIDTH);
         contentPane.setMinWidth(WIDTH);
         contentPane.setMaxWidth(WIDTH);
-        contentPane.setPrefHeight(VIEWPORT_HEIGHT);
-        contentPane.setMinHeight(VIEWPORT_HEIGHT);
+        contentPane.setPrefHeight(viewportHeight);
+        contentPane.setMinHeight(viewportHeight);
         contentPane.setStyle("-fx-background-color: #fbfdff;");
 
         scrollPane.setFitToWidth(false);
@@ -55,9 +54,9 @@ public class SequenceDiagramView extends VBox {
         scrollPane.setPrefWidth(WIDTH);
         scrollPane.setMaxWidth(WIDTH);
         scrollPane.setPrefViewportWidth(WIDTH);
-        scrollPane.setPrefViewportHeight(VIEWPORT_HEIGHT);
-        scrollPane.setMinViewportHeight(VIEWPORT_HEIGHT);
-        scrollPane.setMaxHeight(VIEWPORT_HEIGHT);
+        scrollPane.setPrefViewportHeight(viewportHeight);
+        scrollPane.setMinViewportHeight(viewportHeight);
+        scrollPane.setMaxHeight(viewportHeight);
         scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
 
         VBox diagramBody = new VBox(0, header, scrollPane);
@@ -110,10 +109,23 @@ public class SequenceDiagramView extends VBox {
         redraw();
     }
 
+    public void setViewportHeight(double height) {
+        viewportHeight = Math.max(220, height);
+        setMinHeight(viewportHeight + 34);
+        setPrefHeight(viewportHeight + 34);
+        setMaxHeight(viewportHeight + 34);
+        contentPane.setPrefHeight(viewportHeight);
+        contentPane.setMinHeight(viewportHeight);
+        scrollPane.setPrefViewportHeight(viewportHeight);
+        scrollPane.setMinViewportHeight(viewportHeight);
+        scrollPane.setMaxHeight(viewportHeight);
+        redraw();
+    }
+
     private void redraw() {
         contentPane.getChildren().clear();
         int visibleEvents = events.size();
-        double totalHeight = Math.max(VIEWPORT_HEIGHT, 32 + (visibleEvents * EVENT_GAP));
+        double totalHeight = Math.max(viewportHeight, 32 + (visibleEvents * EVENT_GAP));
         contentPane.setPrefHeight(totalHeight);
         contentPane.setMinHeight(totalHeight);
 

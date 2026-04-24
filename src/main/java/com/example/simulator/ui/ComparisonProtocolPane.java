@@ -35,11 +35,11 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 public class ComparisonProtocolPane extends DashboardCard implements SimulationPlaybackListener {
-    private static final double COMPARISON_CANVAS_SCALE = 0.72;
-    private static final double PACKET_START_X = 150;
-    private static final double PACKET_END_X = 500;
-    private static final double PACKET_Y_CLIENT_TO_SERVER = 206;
-    private static final double PACKET_Y_SERVER_TO_CLIENT = 248;
+    private static final double COMPARISON_CANVAS_SCALE = 0.52;
+    private static final double PACKET_START_X = 108;
+    private static final double PACKET_END_X = 360;
+    private static final double PACKET_Y_CLIENT_TO_SERVER = 154;
+    private static final double PACKET_Y_SERVER_TO_CLIENT = 190;
     private final ProtocolType protocol;
     private final JavaFxSimulationPlayer player;
     private final Consumer<String> packetDetailsOpener;
@@ -84,28 +84,28 @@ public class ComparisonProtocolPane extends DashboardCard implements SimulationP
         MailboxPanel serverCard = new MailboxPanel("Servidor", "Llegadas al receptor");
         clientPacketList = clientCard.getItemsBox();
         serverPacketList = serverCard.getItemsBox();
-        clientCard.setViewportHeight(250);
-        serverCard.setViewportHeight(250);
-        clientCard.setPrefWidth(118);
-        serverCard.setPrefWidth(118);
-        clientCard.setMinWidth(110);
-        serverCard.setMinWidth(110);
+        clientCard.setViewportHeight(190);
+        serverCard.setViewportHeight(190);
+        clientCard.setPrefWidth(96);
+        serverCard.setPrefWidth(96);
+        clientCard.setMinWidth(92);
+        serverCard.setMinWidth(92);
 
         simulationCard = new DashboardCard("SIMULACIÓN", "Escena del protocolo", "Cliente, red y servidor en una vista espejo.");
-        simulationCard.setPrefHeight(400);
-        simulationCard.setMinHeight(400);
-        simulationCard.setMaxHeight(400);
+        simulationCard.setPrefHeight(390);
+        simulationCard.setMinHeight(390);
+        simulationCard.setMaxHeight(390);
         StackPane simulationStage = new StackPane(networkCanvas);
         simulationStage.setAlignment(Pos.CENTER);
-        simulationStage.setPrefWidth(520);
-        simulationStage.setMinWidth(520);
-        simulationStage.setMaxWidth(520);
-        simulationStage.setPrefHeight(320);
-        simulationStage.setMinHeight(320);
-        simulationStage.setMaxHeight(320);
+        simulationStage.setPrefWidth(360);
+        simulationStage.setMinWidth(340);
+        simulationStage.setMaxWidth(360);
+        simulationStage.setPrefHeight(240);
+        simulationStage.setMinHeight(240);
+        simulationStage.setMaxHeight(240);
         simulationStage.setStyle(UiTheme.PANEL_INSET);
 
-        Rectangle clip = new Rectangle(520, 320);
+        Rectangle clip = new Rectangle(360, 240);
         simulationStage.setClip(clip);
         simulationStage.layoutBoundsProperty().addListener((obs, oldBounds, bounds) -> {
             clip.setWidth(bounds.getWidth());
@@ -119,16 +119,20 @@ public class ComparisonProtocolPane extends DashboardCard implements SimulationP
         networkCanvas.setPrefHeight(430);
         networkCanvas.setMinHeight(430);
 
-        HBox networkRow = new HBox(14, clientCard, simulationStage, serverCard);
+        HBox networkRow = new HBox(10, clientCard, simulationStage, serverCard);
         networkRow.setAlignment(Pos.TOP_LEFT);
         HBox.setHgrow(simulationStage, Priority.ALWAYS);
         sequenceDiagramView = new SequenceDiagramView(
                 protocol == ProtocolType.TCP ? "Diagrama secuencial TCP" : "Diagrama secuencial UDP",
                 packetDetailsOpener
         );
+        sequenceDiagramView.setViewportHeight(290);
         sequenceDiagramView.setVisible(false);
         sequenceDiagramView.setManaged(false);
         simulationModeStack = new StackPane(networkRow, sequenceDiagramView);
+        simulationModeStack.setAlignment(Pos.TOP_CENTER);
+        StackPane.setAlignment(networkRow, Pos.TOP_CENTER);
+        StackPane.setAlignment(sequenceDiagramView, Pos.TOP_CENTER);
         simulationCard.setContent(simulationModeStack);
 
         StatePanel statePanel = new StatePanel();
@@ -153,6 +157,11 @@ public class ComparisonProtocolPane extends DashboardCard implements SimulationP
         HBox.setHgrow(receivedPanel, Priority.ALWAYS);
         sentPanel.setMaxWidth(Double.MAX_VALUE);
         receivedPanel.setMaxWidth(Double.MAX_VALUE);
+
+        statePanel.setVisible(false);
+        statePanel.setManaged(false);
+        messages.setVisible(false);
+        messages.setManaged(false);
 
         getContentBox().getChildren().addAll(chip, simulationCard, statePanel, messages);
     }
@@ -186,6 +195,9 @@ public class ComparisonProtocolPane extends DashboardCard implements SimulationP
         simulationModeStack.getChildren().get(0).setManaged(scene);
         sequenceDiagramView.setVisible(!scene);
         sequenceDiagramView.setManaged(!scene);
+        simulationCard.setMinHeight(scene ? 330 : 390);
+        simulationCard.setPrefHeight(scene ? 330 : 390);
+        simulationCard.setMaxHeight(scene ? 330 : 390);
         simulationCard.setTitle(scene ? "Escena del protocolo" : "Diagrama temporal",
                 scene ? "Cliente, red y servidor en una vista espejo." : "Intercambio de mensajes ordenado en el tiempo.");
     }

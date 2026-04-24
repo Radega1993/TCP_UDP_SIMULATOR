@@ -681,7 +681,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             bottomControlBar.setManaged(!useEmbeddedTcpBar);
         }
         if (appHeader != null) {
-            boolean useEmbeddedTcpBar = currentScreen == WorkspaceScreen.TCP || currentScreen == WorkspaceScreen.UDP;
+            boolean useEmbeddedTcpBar = currentScreen == WorkspaceScreen.TCP
+                    || currentScreen == WorkspaceScreen.UDP;
             appHeader.setVisible(!useEmbeddedTcpBar);
             appHeader.setManaged(!useEmbeddedTcpBar);
         }
@@ -696,7 +697,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         boolean showSimulationTools = currentScreen == WorkspaceScreen.TCP
                 || currentScreen == WorkspaceScreen.UDP
                 || currentScreen == WorkspaceScreen.COMPARE;
-        boolean embeddedTcpLayout = currentScreen == WorkspaceScreen.TCP || currentScreen == WorkspaceScreen.UDP;
+        boolean embeddedTcpLayout = currentScreen == WorkspaceScreen.TCP
+                || currentScreen == WorkspaceScreen.UDP;
         if (workspaceIntroCard != null) {
             workspaceIntroCard.setVisible(!embeddedTcpLayout);
             workspaceIntroCard.setManaged(!embeddedTcpLayout);
