@@ -28,6 +28,7 @@ import com.example.simulator.ui.EventLogPanel;
 import com.example.simulator.ui.HomeFooterHint;
 import com.example.simulator.ui.HomeHeroHeader;
 import com.example.simulator.ui.HomeModeCard;
+import com.example.simulator.ui.Ipv4LearningView;
 import com.example.simulator.ui.LayersLearningView;
 import com.example.simulator.ui.MailboxPanel;
 import com.example.simulator.ui.MessageSummaryPanel;
@@ -105,6 +106,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     private Node homeView;
     private Node simpleModeView;
     private Node layersModeView;
+    private Ipv4LearningView ipv4LearningView;
+    private Node ipv4ModeView;
     private StackPane modeContentStack;
     private ComboBox<SimulationMode> modeSelector;
     private ComboBox<ProtocolType> protocolSelector;
@@ -177,7 +180,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         TCP,
         UDP,
         COMPARE,
-        LAYERS
+        LAYERS,
+        IPV4
     }
 
     @Override
@@ -336,6 +340,19 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         );
         layersCard.setOnMouseClicked(event -> openLayersWorkspace());
 
+        HomeModeCard ipv4Card = new HomeModeCard(
+                "MÓDULO IP",
+                "IPv4 y subredes",
+                "Comprueba IP origen, IP destino, máscara y gateway sin cálculos mentales.",
+                "Ideal para entender de un vistazo si dos equipos están en la misma red.",
+                "/icons/ip.svg",
+                "IP",
+                "#2F80ED",
+                "#19a663",
+                false
+        );
+        ipv4Card.setOnMouseClicked(event -> openIpv4Workspace());
+
         GridPane cards = new GridPane();
         cards.setHgap(20);
         cards.setVgap(20);
@@ -350,7 +367,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         cards.add(udpCard, 1, 0);
         cards.add(comparisonCard, 2, 0);
         cards.add(layersCard, 3, 0);
-        for (Node card : List.of(comparisonCard, tcpCard, udpCard, layersCard)) {
+        cards.add(ipv4Card, 0, 1);
+        for (Node card : List.of(comparisonCard, tcpCard, udpCard, layersCard, ipv4Card)) {
             GridPane.setHgrow(card, Priority.ALWAYS);
             GridPane.setFillWidth(card, true);
         }
@@ -392,6 +410,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                         UDP: explica datagramas, pérdidas y baja sobrecarga.
                         TCP vs UDP: compara ambos protocolos con la misma red.
                         Modelo TCP/IP y OSI: conecta la simulación con la teoría de capas.
+                        IPv4 y subredes: calcula red, broadcast, rango y decisión de router.
                         """,
                 false
         ));
@@ -406,6 +425,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 openComparisonWorkspace();
             } else if (currentScreen == WorkspaceScreen.LAYERS) {
                 openLayersWorkspace();
+            } else if (currentScreen == WorkspaceScreen.IPV4) {
+                openIpv4Workspace();
             } else {
                 openComparisonWorkspace();
             }
@@ -511,13 +532,36 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 true
         ));
         layersModeView = layersLearningView;
+        ipv4LearningView = new Ipv4LearningView(
+                this::showHomeScreen,
+                () -> openTextModal(
+                        "Teoría IPv4",
+                        "Conceptos mínimos para entender IP, red y máscara.",
+                        ipv4TheoryText(),
+                        false
+                ),
+                () -> openTextModal(
+                        "Ayuda IPv4",
+                        "Cómo usar la pantalla IPv4 y subredes.",
+                        """
+                                Escribe una IP origen y una IP destino.
+                                Elige la máscara en CIDR o decimal.
+                                El gateway es opcional: úsalo cuando quieras explicar salida a otra red.
+                                El resultado cambia al instante y marca si el envío es directo o necesita router.
+                                """,
+                        false
+                )
+        );
+        ipv4ModeView = ipv4LearningView;
         comparisonModeView.setVisible(false);
         comparisonModeView.setManaged(false);
         comparisonModeView.setViewMode(currentViewMode);
         layersModeView.setVisible(false);
         layersModeView.setManaged(false);
+        ipv4ModeView.setVisible(false);
+        ipv4ModeView.setManaged(false);
 
-        modeContentStack = new StackPane(simpleModeView, comparisonModeView, layersModeView);
+        modeContentStack = new StackPane(simpleModeView, comparisonModeView, layersModeView, ipv4ModeView);
         workspaceIntroCard = new DashboardCard("ESPACIO DE TRABAJO", "Simulación activa",
                 "La configuración se abre en modal y la barra inferior concentra la ejecución y navegación.");
         workspaceIntroCard.setStyle(UiTheme.HERO_CARD);
@@ -604,8 +648,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             bottomControlBar.setManaged(false);
         }
         if (appHeader != null) {
-            appHeader.setVisible(true);
-            appHeader.setManaged(true);
+            appHeader.setVisible(false);
+            appHeader.setManaged(false);
         }
         if (comparisonModeView != null) {
             comparisonModeView.stop();
@@ -660,6 +704,36 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             layersModeView.setVisible(true);
             layersModeView.setManaged(true);
         }
+        if (ipv4ModeView != null) {
+            ipv4ModeView.setVisible(false);
+            ipv4ModeView.setManaged(false);
+        }
+        if (player != null) {
+            player.stop();
+        }
+        updatePlaybackButtons();
+    }
+
+    private void openIpv4Workspace() {
+        currentScreen = WorkspaceScreen.IPV4;
+        revealWorkspace();
+        if (simpleModeView != null) {
+            simpleModeView.setVisible(false);
+            simpleModeView.setManaged(false);
+        }
+        if (comparisonModeView != null) {
+            comparisonModeView.setVisible(false);
+            comparisonModeView.setManaged(false);
+            comparisonModeView.stop();
+        }
+        if (layersModeView != null) {
+            layersModeView.setVisible(false);
+            layersModeView.setManaged(false);
+        }
+        if (ipv4ModeView != null) {
+            ipv4ModeView.setVisible(true);
+            ipv4ModeView.setManaged(true);
+        }
         if (player != null) {
             player.stop();
         }
@@ -676,7 +750,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             workspaceContent.setManaged(true);
         }
         if (bottomControlBar != null) {
-            boolean useEmbeddedTcpBar = currentScreen == WorkspaceScreen.TCP || currentScreen == WorkspaceScreen.UDP;
+            boolean useEmbeddedTcpBar = currentScreen == WorkspaceScreen.TCP
+                    || currentScreen == WorkspaceScreen.UDP
+                    || currentScreen == WorkspaceScreen.IPV4;
             bottomControlBar.setVisible(!useEmbeddedTcpBar);
             bottomControlBar.setManaged(!useEmbeddedTcpBar);
         }
@@ -684,7 +760,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             boolean compactWorkspace = currentScreen == WorkspaceScreen.TCP
                     || currentScreen == WorkspaceScreen.UDP
                     || currentScreen == WorkspaceScreen.COMPARE
-                    || currentScreen == WorkspaceScreen.LAYERS;
+                    || currentScreen == WorkspaceScreen.LAYERS
+                    || currentScreen == WorkspaceScreen.IPV4;
             appHeader.setVisible(!compactWorkspace);
             appHeader.setManaged(!compactWorkspace);
         }
@@ -701,7 +778,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 || currentScreen == WorkspaceScreen.COMPARE;
         boolean embeddedTcpLayout = currentScreen == WorkspaceScreen.TCP
                 || currentScreen == WorkspaceScreen.UDP
-                || currentScreen == WorkspaceScreen.LAYERS;
+                || currentScreen == WorkspaceScreen.LAYERS
+                || currentScreen == WorkspaceScreen.IPV4;
         if (workspaceIntroCard != null) {
             workspaceIntroCard.setVisible(!embeddedTcpLayout);
             workspaceIntroCard.setManaged(!embeddedTcpLayout);
@@ -718,7 +796,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         if (bottomControlBar == null) {
             return;
         }
-        boolean layersWorkspace = currentScreen == WorkspaceScreen.LAYERS;
+        boolean layersWorkspace = currentScreen == WorkspaceScreen.LAYERS || currentScreen == WorkspaceScreen.IPV4;
         boolean simulationWorkspace = currentScreen == WorkspaceScreen.TCP
                 || currentScreen == WorkspaceScreen.UDP
                 || currentScreen == WorkspaceScreen.COMPARE;
@@ -1406,7 +1484,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         if (playPauseButton == null || liveStepButton == null) {
             return;
         }
-        if (currentScreen == WorkspaceScreen.LAYERS) {
+        if (currentScreen == WorkspaceScreen.LAYERS || currentScreen == WorkspaceScreen.IPV4) {
             playPauseButton.setDisable(true);
             liveStepButton.setDisable(true);
             playPauseButton.setText("Pausar");
@@ -1433,17 +1511,22 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     private void switchSimulationMode(SimulationMode mode) {
         boolean compare = mode == SimulationMode.COMPARE;
         boolean layers = currentScreen == WorkspaceScreen.LAYERS;
+        boolean ipv4 = currentScreen == WorkspaceScreen.IPV4;
         if (simpleModeView != null) {
-            simpleModeView.setVisible(!compare && !layers);
-            simpleModeView.setManaged(!compare && !layers);
+            simpleModeView.setVisible(!compare && !layers && !ipv4);
+            simpleModeView.setManaged(!compare && !layers && !ipv4);
         }
         if (comparisonModeView != null) {
-            comparisonModeView.setVisible(compare && !layers);
-            comparisonModeView.setManaged(compare && !layers);
+            comparisonModeView.setVisible(compare && !layers && !ipv4);
+            comparisonModeView.setManaged(compare && !layers && !ipv4);
         }
         if (layersModeView != null) {
             layersModeView.setVisible(layers);
             layersModeView.setManaged(layers);
+        }
+        if (ipv4ModeView != null) {
+            ipv4ModeView.setVisible(ipv4);
+            ipv4ModeView.setManaged(ipv4);
         }
         if (protocolSelector != null) {
             protocolSelector.setDisable(compare || currentScreen == WorkspaceScreen.TCP || currentScreen == WorkspaceScreen.UDP);
@@ -1463,6 +1546,12 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
 
     private void resetActiveMode() {
         scenarioStartRequested = false;
+        if (currentScreen == WorkspaceScreen.IPV4) {
+            if (ipv4LearningView != null) {
+                ipv4LearningView.resetInputs();
+            }
+            return;
+        }
         if (isComparisonMode()) {
             if (comparisonModeView != null) {
                 comparisonModeView.stop();
@@ -2337,9 +2426,50 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             case UDP -> "Guía docente completa para explicar UDP usando la simulación.";
             case COMPARE -> "Guía docente para comparar TCP y UDP con la misma red y el mismo mensaje.";
             case LAYERS -> "Guía docente sobre modelos TCP/IP, OSI, encapsulación y cabeceras.";
+            case IPV4 -> "Guía docente para explicar IP, máscara, red y gateway.";
             default -> "Contexto docente asociado al modo de trabajo activo.";
         };
-        openTextModal("Teoría", subtitle, currentTheoryText, false);
+        openTextModal("Teoría", subtitle, currentScreen == WorkspaceScreen.IPV4 ? ipv4TheoryText() : currentTheoryText, false);
+    }
+
+    private String ipv4TheoryText() {
+        return """
+                Qué es una IP
+                Una dirección IPv4 identifica de forma lógica a un equipo dentro de una red. Tiene cuatro octetos, por ejemplo 192.168.1.10.
+
+                Qué es una red
+                Una red es el conjunto de direcciones que comparten la misma parte inicial. Si dos equipos tienen la misma red, pueden comunicarse directamente dentro de esa subred.
+
+                Qué hace la máscara
+                La máscara indica qué bits pertenecen a la red y qué bits quedan para hosts. Con /24, los tres primeros octetos suelen identificar la red y el último octeto identifica al equipo.
+
+                Qué es un gateway
+                El gateway es la puerta de salida de la red local. Si el destino no pertenece a la misma red, el cliente no intenta llegar directamente al servidor: entrega el paquete al gateway.
+
+                Qué hace un router
+                Un router conecta redes distintas. Recibe el paquete por una interfaz de la red origen y lo reenvía hacia la red destino usando su tabla de rutas.
+
+                Qué es TTL
+                TTL significa Time To Live. Es un contador dentro del paquete IP. Cada salto lo reduce y, si llega a 0, el paquete se descarta.
+
+                Por qué evita loops
+                Si una ruta está mal configurada, un paquete podría quedarse dando vueltas entre routers. El TTL corta ese bucle: cuando se agota, el paquete deja de circular.
+
+                Qué es ICMP
+                ICMP es un protocolo de control. No transporta datos de usuario como TCP o UDP: sirve para avisos y diagnóstico de red.
+
+                Para qué sirve ping
+                Ping envía un ICMP Echo Request y espera un Echo Reply. Si no llega, el error ayuda a saber si falta ruta, si el destino no es alcanzable o si el TTL se agotó.
+
+                Qué contiene una cabecera IP
+                La cabecera IP lleva los metadatos mínimos para entregar el paquete: versión, IP origen, IP destino, TTL, protocolo encapsulado, longitud y flags.
+
+                Cómo decide un router
+                El router revisa su tabla de rutas. Si varias filas coinciden con la IP destino, elige la más específica: una ruta /24 gana a una /16, y ambas ganan a la ruta por defecto /0.
+
+                Decisión clave
+                Si red origen y red destino son iguales, el envío es directo. Si son diferentes, el siguiente salto es el gateway o router.
+                """;
     }
 
     private void updateLayersLearningContext() {

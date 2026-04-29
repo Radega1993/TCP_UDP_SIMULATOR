@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulador IP · Sprints IP-1/IP-2/IP-3</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><button class="icon-btn"><img src="icons/menu.svg"></button><strong>Simulador IP</strong></div>
+  <nav class="sprint-tabs">
+    <button class="tab active" data-screen="ip1"><span>SPRINT IP-1</span> Fundamentos IPv4 visuales</button>
+    <button class="tab" data-screen="ip2"><span>SPRINT IP-2</span> Routing básico (gateway)</button>
+    <button class="tab" data-screen="ip3"><span>SPRINT IP-3</span> TTL y descarte</button>
+  </nav>
+  <div class="top-actions"><button>ⓘ Ayuda</button><button>📘 Teoría</button></div>
+</header>
+
+<main>
+<section id="ip1" class="screen active">
+  <div class="ip1-grid">
+    <aside class="card config-card">
+      <h2>⚙ Configuración</h2>
+      <label>IP origen</label><input value="192.168.1.10">
+      <label>IP destino</label><input value="192.168.2.20">
+      <label>Máscara de subred</label><select><option>Personalizada</option><option>255.255.255.0 (/24)</option></select>
+      <div class="split"><input value="255.255.255.0"><input value="/24"></div>
+      <label>Gateway opcional</label><input value="192.168.1.1">
+      <button class="primary">▦ Calcular</button><button class="secondary">↻ Limpiar</button>
+      <div class="mini-theory"><strong>💡 ¿Qué es una IP?</strong><p>Una IP identifica de forma única un dispositivo en una red.</p></div>
+    </aside>
+    <section class="card results-card">
+      <h2>☑ Resultados</h2>
+      <div class="result-columns">
+        <article><h3>Red origen</h3><dl><dt>Dirección IP</dt><dd>192.168.1.10</dd><dt>Red</dt><dd>192.168.1.0</dd><dt>Broadcast</dt><dd>192.168.1.255</dd><dt>Rango de hosts</dt><dd>192.168.1.1 - 192.168.1.254</dd><dt>Máscara</dt><dd>255.255.255.0 (/24)</dd></dl></article>
+        <article><h3>Red destino</h3><dl><dt>Dirección IP</dt><dd>192.168.2.20</dd><dt>Red</dt><dd>192.168.2.0</dd><dt>Broadcast</dt><dd>192.168.2.255</dd><dt>Rango de hosts</dt><dd>192.168.2.1 - 192.168.2.254</dd><dt>Máscara</dt><dd>255.255.255.0 (/24)</dd></dl></article>
+      </div>
+      <div class="decision-row">
+        <div class="decision no"><b>✓</b><strong>¿Están en la misma red?</strong><em>NO</em><small>Las redes son diferentes.</small></div>
+        <div class="decision yes"><b>◎</b><strong>¿Necesita router?</strong><em>SÍ</em><small>Debe usar el gateway.</small></div>
+      </div>
+      <div class="mini-network">
+        <div class="zone green"><strong>RED ORIGEN</strong><span>192.168.1.0/24</span><div class="device">🖥️<b>192.168.1.10</b></div></div>
+        <div class="gateway">── <span>🌐<b>GATEWAY</b><em>192.168.1.1</em></span> ──</div>
+        <div class="zone blue"><strong>RED DESTINO</strong><span>192.168.2.0/24</span><div class="device">🗄️<b>192.168.2.20</b></div></div>
+      </div>
+      <div class="hint">ⓘ La máscara define qué parte de la IP es la red y cuál es el host.</div>
+    </section>
+  </div>
+</section>
+
+<section id="ip2" class="screen">
+  <div class="ip2-grid">
+    <section class="card routing-main">
+      <h2>Escena de red</h2>
+      <div class="route-scene">
+        <div class="route-device">🖥️<strong>Cliente</strong><span>192.168.1.10</span></div><i></i>
+        <div class="route-device">▤<strong>Switch</strong></div><i></i>
+        <div class="route-device">🌐<strong>Router</strong><span>192.168.1.1</span></div><i></i>
+        <div class="route-device">🗄️<strong>Servidor</strong><span>192.168.2.20</span></div>
+      </div>
+      <div class="routing-cards">
+        <article class="small-card"><h3>Decisión de envío</h3><dl><dt>IP destino</dt><dd>192.168.2.20</dd><dt>Red local</dt><dd>192.168.1.0/24</dd><dt>¿Está en la misma red?</dt><dd class="red">NO</dd></dl><div class="success-pill">✓ Se usa el gateway para enviar el paquete.</div></article>
+        <article class="small-card"><h3>Siguiente salto</h3><dl><dt>Next hop</dt><dd>192.168.1.1</dd><dt>Interfaz de salida</dt><dd>LAN</dd><dt>Red destino</dt><dd>192.168.2.0/24</dd></dl></article>
+      </div>
+      <article class="inner-table"><h3>Detalle por saltos</h3><table><thead><tr><th>Salto</th><th>Dispositivo</th><th>Interfaz salida</th><th>Siguiente salto</th><th>Red destino</th></tr></thead><tbody><tr><td>1</td><td>Cliente</td><td>—</td><td>192.168.1.1</td><td>192.168.2.0/24</td></tr><tr><td>2</td><td>Switch</td><td>LAN</td><td>192.168.1.1</td><td>192.168.2.0/24</td></tr><tr><td>3</td><td>Router</td><td>192.168.2.20</td><td>192.168.2.20</td><td>192.168.2.0/24</td></tr><tr><td>4</td><td>Servidor</td><td>—</td><td>Entregado</td><td>—</td></tr></tbody></table></article>
+    </section>
+    <aside class="card trajectory">
+      <h2>Trayecto del paquete</h2>
+      <article><span>1</span><div><strong>Cliente (Origen)</strong><b>192.168.1.10</b><p>El paquete se envía a su gateway predeterminado.</p></div><em>OK</em></article>
+      <article><span>2</span><div><strong>Switch</strong><p>Reenvía el paquete al router.</p></div><em>OK</em></article>
+      <article><span>3</span><div><strong>Router (Gateway)</strong><b>192.168.1.1</b><p>Lo envía hacia la red destino.</p></div><em>OK</em></article>
+      <article><span>4</span><div><strong>Servidor (Destino)</strong><b>192.168.2.20</b><p>El paquete llega correctamente.</p></div><em>OK</em></article>
+    </aside>
+  </div>
+  <div class="footer-hint">ⓘ Un router conecta redes diferentes. El gateway es la puerta de salida a otra red.</div>
+</section>
+
+<section id="ip3" class="screen">
+  <div class="ttl-layout">
+    <section class="card ttl-main">
+      <h2>Trayecto del paquete (TTL)</h2>
+      <div class="ttl-path"><div>🖥️<strong>PC Origen</strong><span>192.168.1.10</span></div><i></i><div>🌐<strong>Router 1</strong><span>10.0.0.1</span></div><i></i><div>🌐<strong>Router 2</strong><span>10.0.0.2</span></div><i></i><div>🌐<strong>Router 3</strong><span>10.0.0.3</span></div><i></i><div>🖥️<strong>Destino</strong><span>192.168.2.20</span></div></div>
+      <table class="ttl-table"><thead><tr><th>Salto</th><th>Dispositivo</th><th>Acción</th><th>TTL antes</th><th>TTL después</th><th>Estado</th></tr></thead><tbody><tr><td>1</td><td>PC Origen</td><td>Envía paquete</td><td>64</td><td>64</td><td><span class="ok">OK</span></td></tr><tr><td>2</td><td>Router 1</td><td>Recibe y reenvía</td><td>64</td><td>63</td><td><span class="ok">OK</span></td></tr><tr><td>3</td><td>Router 2</td><td>Recibe y reenvía</td><td>63</td><td>62</td><td><span class="ok">OK</span></td></tr><tr><td>4</td><td>Router 3</td><td>Recibe y reenvía</td><td>62</td><td>61</td><td><span class="ok">OK</span></td></tr><tr><td>5</td><td>Destino</td><td>Paquete entregado</td><td>61</td><td>61</td><td><span class="delivered">Entregado</span></td></tr></tbody></table>
+      <div class="theory-grid"><article><strong>⚙ ¿Qué es TTL?</strong><p>TTL limita el tiempo que un paquete puede existir en la red. Se decrementa en cada salto.</p></article><article><strong>♻ ¿Por qué evita loops?</strong><p>Si hay un bucle de routing, el TTL llegará a 0 y el paquete será descartado.</p></article></div>
+    </section>
+    <aside class="card packet-card"><h2>Paquete en tránsito</h2><dl><dt>IP origen</dt><dd>192.168.1.10</dd><dt>IP destino</dt><dd>192.168.2.20</dd><dt>Protocolo</dt><dd>ICMP (Ping)</dd></dl><div class="ttl-current"><span>TTL actual</span><strong>61</strong><b>Saltos restantes</b></div></aside>
+    <section class="card ttl-expired"><h2>🔥 TTL expirado</h2><h3>El paquete no pudo llegar a su destino.</h3><p>TTL llegó a 0 en Router 3.</p><div class="expired-path"><div>🖥️<span>PC Origen</span></div><i></i><div>🌐<span>Router 1</span></div><i></i><div>🌐<span>Router 2</span></div><i></i><div class="bad">🌐<span>Router 3</span></div><i class="dashed"></i><div>🖥️<span>Destino</span></div></div><div class="event-detail"><h3>Detalle del evento</h3><dl><dt>Dispositivo</dt><dd>Router 3</dd><dt>TTL recibido</dt><dd>1</dd><dt>TTL después</dt><dd>0</dd><dt>Acción</dt><dd>Paquete descartado</dd><dt>ICMP generado</dt><dd>Time Exceeded</dd></dl></div></section>
+  </div>
+  <footer class="ttl-footer"><span>Configuración actual: TTL inicial = 64 saltos</span><span><b class="ok-dot"></b> Paquete reenviado</span><span><b class="delivered-dot"></b> Paquete entregado</span><span><b class="bad-dot"></b> Paquete descartado</span><button>↻ Reiniciar simulación</button></footer>
+</section>
+</main>
+
+<script>
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    document.querySelectorAll(".tab,.screen").forEach(el=>el.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById(tab.dataset.screen).classList.add("active");
+  });
+});
+</script>
+</body>
+</html>

@@ -84,6 +84,13 @@ public class QuickAccessChip extends HBox {
         if (resourcePath == null || resourcePath.isBlank()) {
             return null;
         }
+        if (resourcePath.endsWith(".svg")) {
+            Image png = load(resourcePath.substring(0, resourcePath.length() - 4) + ".png");
+            if (png != null) {
+                return png;
+            }
+            return null;
+        }
         try (InputStream stream = QuickAccessChip.class.getResourceAsStream(resourcePath)) {
             if (stream == null) {
                 return null;

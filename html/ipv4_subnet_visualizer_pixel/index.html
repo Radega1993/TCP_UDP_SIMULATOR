@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IPv4 & Subnet Visualizer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><button class="menu-btn"><img src="icons/menu.svg"></button><strong>Simulador visual de TCP y UDP</strong></div>
+  <div class="mode-pill">Módulo IP: IPv4 y subredes</div>
+  <div class="ready-pill">✦ Listo para calcular</div>
+  <div class="actions"><button>↻ Reiniciar</button><button>📘 Teoría</button><button>❔ Ayuda</button></div>
+</header>
+
+<main class="layout">
+  <aside class="left">
+    <section class="card config-card">
+      <div class="card-title"><span class="step">1</span><div><h3>Configuración IPv4</h3><p>Introduce dos equipos y una máscara para saber si están en la misma red.</p></div></div>
+      <label>IP origen</label><div class="input-icon"><img src="icons/pc.svg"><input value="192.168.1.10"></div>
+      <label>IP destino</label><div class="input-icon"><img src="icons/server.svg"><input value="192.168.2.20"></div>
+      <label>Máscara de subred</label><select><option>255.255.255.0 (/24)</option><option>255.255.0.0 (/16)</option><option>255.255.255.128 (/25)</option></select>
+      <label>Gateway opcional</label><div class="input-icon"><img src="icons/router.svg"><input value="192.168.1.1"></div>
+      <button class="primary">Calcular red</button>
+    </section>
+
+    <section class="card theory-card">
+      <h3>Teoría esencial</h3>
+      <article><img src="icons/ip.svg"><div><strong>¿Qué es una IP?</strong><p>Identifica lógicamente a un dispositivo dentro de una red.</p></div></article>
+      <article><img src="icons/network.svg"><div><strong>¿Qué es una red?</strong><p>Conjunto de direcciones que comparten la misma parte de red.</p></div></article>
+      <article><img src="icons/binary.svg"><div><strong>¿Qué hace la máscara?</strong><p>Separa los bits de red de los bits disponibles para hosts.</p></div></article>
+    </section>
+  </aside>
+
+  <section class="center">
+    <section class="card hero-result">
+      <div class="result-main">
+        <div class="result-icon no"><img src="icons/x.svg"></div>
+        <div><span class="eyebrow">Resultado principal</span><h1>No están en la misma red</h1><p>El origen y el destino pertenecen a subredes diferentes. Para comunicarse, el equipo origen necesita usar el gateway.</p></div>
+      </div>
+      <div class="result-badges"><span class="badge red">Misma red: No</span><span class="badge green">Necesita router: Sí</span><span class="badge blue">Máscara: /24</span></div>
+    </section>
+
+    <section class="card diagram-card">
+      <div class="section-head"><h3>Visualización de red</h3><span>192.168.1.0/24 ≠ 192.168.2.0/24</span></div>
+      <div class="network-diagram">
+        <div class="net-zone origin"><div class="zone-title"><span></span>Red origen<br><strong>192.168.1.0 /24</strong></div><div class="device"><img src="icons/pc.svg"><strong>PC Origen</strong><span>192.168.1.10</span></div></div>
+        <div class="gateway"><div class="line left-line"></div><div class="router"><img src="icons/router.svg"><strong>Gateway</strong><span>192.168.1.1</span></div><div class="line right-line"></div></div>
+        <div class="net-zone destination"><div class="zone-title"><span></span>Red destino<br><strong>192.168.2.0 /24</strong></div><div class="device"><img src="icons/server.svg"><strong>Servidor</strong><span>192.168.2.20</span></div></div>
+      </div>
+      <div class="path-explanation"><span>1. El PC comprueba la máscara</span><span>2. Detecta red diferente</span><span>3. Envía al gateway</span><span>4. El router encamina al destino</span></div>
+    </section>
+
+    <div class="bottom-grid">
+      <section class="card binary-card">
+        <div class="section-head"><h3>Vista binaria simplificada</h3><span>Red vs host</span></div>
+        <div class="binary-row"><strong>IP origen</strong><div class="bits"><span class="network">11000000</span><span class="network">10101000</span><span class="network">00000001</span><span class="host">00001010</span></div></div>
+        <div class="binary-row"><strong>IP destino</strong><div class="bits"><span class="network">11000000</span><span class="network">10101000</span><span class="network different">00000010</span><span class="host">00010100</span></div></div>
+        <div class="binary-legend"><span><i class="network-dot"></i>Bits de red</span><span><i class="host-dot"></i>Bits de host</span><span><i class="diff-dot"></i>Diferencia</span></div>
+      </section>
+      <section class="card decision-card">
+        <h3>Decisión del equipo origen</h3>
+        <div class="decision-step ok">Calcular red origen → 192.168.1.0</div>
+        <div class="decision-step warn">Calcular red destino → 192.168.2.0</div>
+        <div class="decision-arrow">↓</div>
+        <div class="decision-final">Redes distintas → enviar al gateway</div>
+      </section>
+    </div>
+  </section>
+
+  <aside class="right">
+    <section class="card results-card">
+      <div class="card-title compact"><span class="step">2</span><div><h3>Resultados</h3><p>Cálculo automático de red y hosts.</p></div></div>
+      <div class="result-table">
+        <div><span>Red origen</span><strong>192.168.1.0</strong></div><div><span>Broadcast origen</span><strong>192.168.1.255</strong></div><div><span>Rango origen</span><strong>192.168.1.1 - 192.168.1.254</strong></div>
+        <div><span>Red destino</span><strong>192.168.2.0</strong></div><div><span>Broadcast destino</span><strong>192.168.2.255</strong></div><div><span>Rango destino</span><strong>192.168.2.1 - 192.168.2.254</strong></div>
+      </div>
+    </section>
+    <section class="card feedback-card">
+      <h3>Feedback visual</h3>
+      <div class="feedback no"><img src="icons/x.svg"><div><strong>No están en la misma red</strong><p>El tercer octeto cambia con máscara /24.</p></div></div>
+      <div class="feedback yes"><img src="icons/check.svg"><div><strong>Sí necesita router</strong><p>El paquete debe salir por el gateway.</p></div></div>
+    </section>
+    <section class="card classroom-card">
+      <h3>Para explicar en clase</h3>
+      <ul><li>La máscara /24 deja los tres primeros octetos como red.</li><li>192.168.1.10 pertenece a 192.168.1.0/24.</li><li>192.168.2.20 pertenece a 192.168.2.0/24.</li><li>Si las redes son distintas, se necesita gateway.</li></ul>
+    </section>
+  </aside>
+</main>
+
+<footer class="legend">
+  <strong>Leyenda rápida</strong><span><i class="dot blue"></i>Equipo origen</span><span><i class="dot dark"></i>Equipo destino</span><span><i class="dot purple"></i>Gateway / Router</span><span><i class="dot green"></i>Resultado correcto</span><span><i class="dot red"></i>Red diferente</span><span class="note"><img src="icons/info.svg"> Un equipo solo envía directo si destino y origen están en la misma red.</span>
+</footer>
+</body>
+</html>
