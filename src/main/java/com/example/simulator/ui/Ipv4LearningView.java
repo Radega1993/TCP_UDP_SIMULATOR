@@ -22,6 +22,7 @@ public class Ipv4LearningView extends VBox {
     private final TextField destinationIpField = new TextField("192.168.2.20");
     private final TextField gatewayField = new TextField("192.168.1.1");
     private final Spinner<Integer> ttlSpinner = new Spinner<>(1, 255, 64);
+    private final Spinner<Integer> mtuSpinner = new Spinner<>(68, 9000, 1500);
     private final ComboBox<MaskOption> maskBox = new ComboBox<>();
     private final Label readyPill = new Label("Listo para calcular");
     private final Label heroTitle = new Label();
@@ -71,12 +72,18 @@ public class Ipv4LearningView extends VBox {
     private final Ipv4HeaderInspectorView headerInspectorView = new Ipv4HeaderInspectorView();
     private final Button ip6Tab = new Button("Tabla de rutas");
     private final Ipv4RouteTableView routeTableView = new Ipv4RouteTableView();
+    private final Button ip7Tab = new Button("Fragmentación IP");
+    private final Ipv4FragmentationView fragmentationView = new Ipv4FragmentationView();
+    private final Button ip8Tab = new Button("ARP local");
+    private final ArpLearningView arpLearningView = new ArpLearningView();
     private Node ip1Screen;
     private Node ip2Screen;
     private Node ip3Screen;
     private Node ip4Screen;
     private Node ip5Screen;
     private Node ip6Screen;
+    private Node ip7Screen;
+    private Node ip8Screen;
     private IpSprint activeSprint = IpSprint.IP1;
 
     public Ipv4LearningView(Runnable onHome, Runnable onTheory, Runnable onHelp) {
@@ -110,6 +117,7 @@ public class Ipv4LearningView extends VBox {
         destinationIpField.setText("192.168.2.20");
         gatewayField.setText("192.168.1.1");
         ttlSpinner.getValueFactory().setValue(64);
+        mtuSpinner.getValueFactory().setValue(1500);
         maskBox.setValue(maskBox.getItems().stream().filter(option -> option.cidr == 24).findFirst().orElse(maskBox.getItems().get(0)));
         calculateAndRender();
     }
@@ -121,7 +129,7 @@ public class Ipv4LearningView extends VBox {
                 + "-fx-background-color: #e8f1ff; -fx-background-radius: 10;"
                 + "-fx-cursor: hand;");
 
-        Label brand = new Label("Simulador visual de TCP y UDP");
+        Label brand = new Label("AulaRed");
         brand.setStyle("-fx-font-size: 17px; -fx-font-weight: 800; -fx-text-fill: #102a43;");
         HBox brandBox = new HBox(12, menu, brand);
         brandBox.setAlignment(Pos.CENTER_LEFT);
@@ -165,7 +173,9 @@ public class Ipv4LearningView extends VBox {
         ip4Screen = buildIp4Screen();
         ip5Screen = buildIp5Screen();
         ip6Screen = buildIp6Screen();
-        sprintContentStack.getChildren().setAll(ip1Screen, ip2Screen, ip3Screen, ip4Screen, ip5Screen, ip6Screen);
+        ip7Screen = buildIp7Screen();
+        ip8Screen = buildIp8Screen();
+        sprintContentStack.getChildren().setAll(ip1Screen, ip2Screen, ip3Screen, ip4Screen, ip5Screen, ip6Screen, ip7Screen, ip8Screen);
         layout.add(buildLeftColumn(), 0, 0);
         layout.add(sprintContentStack, 1, 0);
         return layout;
@@ -178,13 +188,17 @@ public class Ipv4LearningView extends VBox {
         ip4Tab.setGraphic(tabGraphic("/icons/network.svg", "ICMP y ping", "Echo Request y Reply"));
         ip5Tab.setGraphic(tabGraphic("/icons/binary.svg", "Cabecera IP", "Inspector del paquete"));
         ip6Tab.setGraphic(tabGraphic("/icons/router.svg", "Tabla de rutas", "Longest prefix match"));
+        ip7Tab.setGraphic(tabGraphic("/icons/physical.svg", "Fragmentación IP", "MTU, offset y MF"));
+        ip8Tab.setGraphic(tabGraphic("/icons/network.svg", "ARP local", "IP a MAC"));
         ip1Tab.setText("");
         ip2Tab.setText("");
         ip3Tab.setText("");
         ip4Tab.setText("");
         ip5Tab.setText("");
         ip6Tab.setText("");
-        HBox tabs = new HBox(10, ip1Tab, ip2Tab, ip3Tab, ip4Tab, ip5Tab, ip6Tab);
+        ip7Tab.setText("");
+        ip8Tab.setText("");
+        HBox tabs = new HBox(8, ip1Tab, ip2Tab, ip3Tab, ip4Tab, ip5Tab, ip6Tab, ip7Tab, ip8Tab);
         tabs.setAlignment(Pos.CENTER_LEFT);
         tabs.setPadding(new Insets(14, 18, 0, 18));
         ip1Tab.setOnAction(event -> showSprint(IpSprint.IP1));
@@ -193,7 +207,14 @@ public class Ipv4LearningView extends VBox {
         ip4Tab.setOnAction(event -> showSprint(IpSprint.IP4));
         ip5Tab.setOnAction(event -> showSprint(IpSprint.IP5));
         ip6Tab.setOnAction(event -> showSprint(IpSprint.IP6));
-        return tabs;
+        ip7Tab.setOnAction(event -> showSprint(IpSprint.IP7));
+        ip8Tab.setOnAction(event -> showSprint(IpSprint.IP8));
+        ScrollPane scroll = new ScrollPane(tabs);
+        scroll.setFitToHeight(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+        return scroll;
     }
 
     private Node tabGraphic(String iconPath, String title, String subtitle) {
@@ -241,6 +262,14 @@ public class Ipv4LearningView extends VBox {
         return routeTableView;
     }
 
+    private Node buildIp7Screen() {
+        return fragmentationView;
+    }
+
+    private Node buildIp8Screen() {
+        return arpLearningView;
+    }
+
     private GridPane baseScreenGrid(double centerMinWidth, double rightWidth) {
         GridPane layout = new GridPane();
         layout.setHgap(14);
@@ -281,6 +310,7 @@ public class Ipv4LearningView extends VBox {
                 maskBlock(),
                 inputBlock("Gateway opcional", gatewayField, "/icons/router.svg"),
                 ttlBlock(),
+                mtuBlock(),
                 primaryButton()
         ));
         return card;
@@ -318,6 +348,18 @@ public class Ipv4LearningView extends VBox {
         return new VBox(8, label, ttlSpinner, hint);
     }
 
+    private Node mtuBlock() {
+        Label label = fieldLabel("MTU del enlace");
+        mtuSpinner.setEditable(true);
+        mtuSpinner.setMinHeight(42);
+        mtuSpinner.setMaxWidth(Double.MAX_VALUE);
+        mtuSpinner.setStyle("-fx-background-color: #ffffff; -fx-border-color: #d9e6f2; -fx-border-radius: 8; -fx-background-radius: 8;");
+        Label hint = new Label("Prueba 1500, 1200 o 576 para ver más fragmentos.");
+        hint.setWrapText(true);
+        hint.setStyle("-fx-text-fill: #5f7390; -fx-font-size: 12px;");
+        return new VBox(8, label, mtuSpinner, hint);
+    }
+
     private Node primaryButton() {
         Button button = new Button("Calcular red");
         button.setMaxWidth(Double.MAX_VALUE);
@@ -337,7 +379,9 @@ public class Ipv4LearningView extends VBox {
                 theoryItem("/icons/binary.svg", "¿Qué hace la máscara?", "Separa los bits de red de los bits disponibles para hosts."),
                 theoryItem("/icons/info.svg", "¿Qué es TTL?", "Contador que baja en cada salto para que un paquete no circule para siempre."),
                 theoryItem("/icons/check.svg", "¿Qué comprueba ping?", "Envía ICMP Echo Request y espera Echo Reply o un error útil."),
-                theoryItem("/icons/router.svg", "¿Cómo elige ruta?", "Usa la tabla de rutas y gana la coincidencia más específica.")
+                theoryItem("/icons/router.svg", "¿Cómo elige ruta?", "Usa la tabla de rutas y gana la coincidencia más específica."),
+                theoryItem("/icons/physical.svg", "¿Qué es MTU?", "Tamaño máximo que puede cruzar un enlace sin dividir el paquete."),
+                theoryItem("/icons/network.svg", "¿Qué hace ARP?", "Pregunta qué MAC corresponde a una IP local, como la del gateway.")
         ));
         return card;
     }
@@ -726,6 +770,7 @@ public class Ipv4LearningView extends VBox {
         destinationIpField.textProperty().addListener((obs, old, value) -> calculateAndRender());
         gatewayField.textProperty().addListener((obs, old, value) -> calculateAndRender());
         ttlSpinner.valueProperty().addListener((obs, old, value) -> calculateAndRender());
+        mtuSpinner.valueProperty().addListener((obs, old, value) -> calculateAndRender());
         maskBox.valueProperty().addListener((obs, old, value) -> calculateAndRender());
     }
 
@@ -755,12 +800,22 @@ public class Ipv4LearningView extends VBox {
             ip6Screen.setVisible(sprint == IpSprint.IP6);
             ip6Screen.setManaged(sprint == IpSprint.IP6);
         }
+        if (ip7Screen != null) {
+            ip7Screen.setVisible(sprint == IpSprint.IP7);
+            ip7Screen.setManaged(sprint == IpSprint.IP7);
+        }
+        if (ip8Screen != null) {
+            ip8Screen.setVisible(sprint == IpSprint.IP8);
+            ip8Screen.setManaged(sprint == IpSprint.IP8);
+        }
         styleSprintTab(ip1Tab, sprint == IpSprint.IP1, "#087f4f");
         styleSprintTab(ip2Tab, sprint == IpSprint.IP2, "#2f80ed");
         styleSprintTab(ip3Tab, sprint == IpSprint.IP3, "#b45309");
         styleSprintTab(ip4Tab, sprint == IpSprint.IP4, "#8a55e6");
         styleSprintTab(ip5Tab, sprint == IpSprint.IP5, "#ff8b1a");
         styleSprintTab(ip6Tab, sprint == IpSprint.IP6, "#0f9f8f");
+        styleSprintTab(ip7Tab, sprint == IpSprint.IP7, "#d97706");
+        styleSprintTab(ip8Tab, sprint == IpSprint.IP8, "#19a663");
     }
 
     private void styleSprintTab(Button tab, boolean active, String accent) {
@@ -900,6 +955,8 @@ public class Ipv4LearningView extends VBox {
         icmpPingView.updateContext(result, gateway, initialTtl);
         headerInspectorView.updateContext(result, initialTtl);
         routeTableView.updateContext(result, gateway);
+        fragmentationView.updateContext(result, mtuSpinner.getValue());
+        arpLearningView.updateContext(result, gateway);
     }
 
     private void renderIp2(Ipv4SubnetResult result, String nextHop, String usedInterface, boolean hasGateway, boolean gatewayInSourceNetwork) {
@@ -1134,6 +1191,8 @@ public class Ipv4LearningView extends VBox {
         icmpPingView.renderError(message);
         headerInspectorView.renderError(message);
         routeTableView.renderError(message);
+        fragmentationView.renderError(message);
+        arpLearningView.renderError(message);
     }
 
     private Node[] classroomLines(Ipv4SubnetResult result) {
@@ -1407,7 +1466,9 @@ public class Ipv4LearningView extends VBox {
         IP3,
         IP4,
         IP5,
-        IP6
+        IP6,
+        IP7,
+        IP8
     }
 
     private record MaskOption(int cidr) {

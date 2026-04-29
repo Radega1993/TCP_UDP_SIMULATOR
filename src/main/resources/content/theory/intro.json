@@ -1,7 +1,7 @@
 {
   "id": "intro",
-  "title": "¿Qué es este simulador?",
-  "summary": "Este simulador permite observar visualmente cómo se comportan los protocolos TCP y UDP en una red. Su objetivo no es replicar todos los detalles de una implementación real al 100%, sino mostrar de forma clara los conceptos fundamentales que se estudian en redes.",
+  "title": "¿Qué es AulaRed?",
+  "summary": "AulaRed es un laboratorio visual para aprender redes: protocolos TCP y UDP, modelos de capas, direccionamiento IPv4/IPv6, routing, ARP, ICMP y subnetting. Su objetivo no es replicar todos los detalles de una implementación real al 100%, sino mostrar de forma clara los conceptos fundamentales que se estudian en clase.",
   "bullets": [
     "Muestra eventos, estados, pérdidas y confirmaciones de forma visual.",
     "Se puede usar para comparar fiabilidad frente a simplicidad.",

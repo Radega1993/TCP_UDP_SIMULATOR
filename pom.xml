@@ -4,9 +4,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.example</groupId>
-    <artifactId>tcp-udp-simulator-java</artifactId>
+    <artifactId>aula-red</artifactId>
     <version>1.0.0</version>
-    <name>TCP UDP Simulator</name>
+    <name>AulaRed</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

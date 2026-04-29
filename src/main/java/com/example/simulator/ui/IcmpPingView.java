@@ -56,7 +56,7 @@ public class IcmpPingView extends GridPane {
     }
 
     private Node buildMainColumn() {
-        DashboardCard pingCard = new DashboardCard("ICMP", "Mini simulador de ping", "Comprueba si un destino responde y qué error devuelve la red.");
+        DashboardCard pingCard = new DashboardCard("ICMP", "Práctica de ping", "Comprueba si un destino responde y qué error devuelve la red.");
         pingCard.setStyle(cardStyle());
 
         Button start = new Button("Iniciar ping");

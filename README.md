@@ -1,24 +1,26 @@
-# Simulador visual de TCP y UDP
+# AulaRed
 
-Aplicación educativa de escritorio para aprender y enseñar cómo funcionan TCP, UDP, la comparación entre ambos protocolos y los modelos de capas TCP/IP y OSI.
+**AulaRed** es un laboratorio visual de redes para clase. Nació como una herramienta para explicar TCP y UDP, pero el proyecto ya cubre una ruta didáctica mucho más amplia: modelos de capas, IPv4, routing, ICMP, ARP, fragmentación, IPv6 y subnetting.
 
-El proyecto está desarrollado con Java 17, JavaFX y Maven. Es un proyecto open source creado por **Raül de Arriba**.
+El proyecto está desarrollado con **Java 17**, **JavaFX** y **Maven**. Es open source y está creado por **Raül de Arriba**.
 
-## Qué incluye
+## Estado Actual
 
-- Simulación visual de TCP.
-- Simulación visual de UDP.
-- Comparador TCP vs UDP usando el mismo mensaje y las mismas condiciones de red.
-- Vista de diagrama temporal para seguir el intercambio de paquetes.
-- Vista de paquetes para observar cliente, red y servidor.
-- Modelo TCP/IP y modelo OSI con equivalencias visuales.
-- Vista de encapsulación por capas.
-- Paneles de teoría y ayuda contextual.
-- Logs de eventos por protocolo.
-- Revisión paso a paso de simulaciones.
-- Empaquetado para Linux y Windows.
+AulaRed funciona como una aplicación de escritorio modular para aprender redes paso a paso:
 
-## Funcionalidades actuales
+- TCP y UDP con visualización de paquetes.
+- Comparador TCP vs UDP usando las mismas condiciones de red.
+- Modelo TCP/IP y modelo OSI con encapsulación.
+- Módulo IPv4 y subredes con routing básico.
+- ICMP y ping.
+- Inspector de cabecera IP.
+- Tabla de rutas con longest prefix match simplificado.
+- Fragmentación IPv4 y MTU.
+- ARP request, ARP reply y caché ARP.
+- IPv6 light con comparativa IPv4 vs IPv6.
+- Módulo Subnetting con calculadora, binario y práctica aplicada.
+
+## Módulos
 
 ### TCP
 
@@ -28,7 +30,6 @@ El proyecto está desarrollado con Java 17, JavaFX y Maven. Es un proyecto open 
 - ACK por segmento.
 - Pérdida de paquetes.
 - Retransmisión por timeout.
-- Control visual de entrega.
 - Cierre de conexión con `FIN` y `ACK`.
 - Paneles de ventana deslizante, congestión, mensajes y eventos.
 
@@ -43,20 +44,51 @@ El proyecto está desarrollado con Java 17, JavaFX y Maven. Es un proyecto open 
 ### Comparador TCP vs UDP
 
 - Ejecuta TCP y UDP en paralelo.
-- Usa el mismo mensaje para ambos protocolos.
-- Aplica las mismas condiciones de red.
+- Usa el mismo mensaje y las mismas condiciones de red.
 - Muestra diferencias en entrega, pérdidas, retransmisiones y eventos.
-- Incluye vista temporal y vista de paquetes.
-- Resume los resultados de ambos protocolos.
+- Incluye vista temporal, vista de paquetes y resumen de resultados.
 
 ### Modelos TCP/IP y OSI
 
-- Comparación visual entre el modelo TCP/IP y el modelo OSI.
+- Comparación visual entre modelos.
 - Capas con colores, iconos y descripción.
 - Equivalencias entre capas.
-- Tabla de PDU por modelo.
-- Detalle por capa.
+- Tabla de PDU.
 - Flujo de encapsulación con TCP o UDP.
+
+### IPv4 y Subredes
+
+- Cálculo de red origen y destino.
+- Broadcast y rango de hosts.
+- Detección de misma red.
+- Decisión de si necesita router.
+- Routing básico con gateway.
+- TTL y descarte por expiración.
+- ICMP/ping con Echo Request, Echo Reply, Destination Unreachable y TTL Exceeded.
+- Inspector de cabecera IP.
+- Tabla de rutas con selección de ruta.
+- Fragmentación IP por MTU.
+- ARP request/reply y caché ARP.
+
+### IPv6 Light
+
+- Representación visual de direcciones IPv6.
+- Comparativa IPv4 vs IPv6.
+- Tipos básicos: unicast y multicast.
+
+### Subnetting
+
+- Fundamentos visuales: una red grande dividida en redes pequeñas.
+- Calculadora por número de subredes o por hosts necesarios.
+- Tabla con `Subred`, `Network`, `First Host`, `Last Host` y `Broadcast`.
+- Vista binaria con bits de red y bits de host.
+- Explicación visual del AND lógico.
+- Práctica aplicada con escenarios reales:
+  - Oficina con departamentos.
+  - Empresa con redes separadas.
+- Drag and drop de bloques de red hacia departamentos.
+- Feedback correcto/incorrecto.
+- Introducción a VLSM.
 
 ## Requisitos
 
@@ -79,56 +111,41 @@ mvn -version
 jpackage --version
 ```
 
-## Instalación para usuarios
-
-### Linux usando `.deb`
-
-Descarga el paquete `.deb` de la versión que quieras instalar y ejecuta:
-
-```bash
-sudo apt install ./tcp-udp-simulator_<version>-1_amd64.deb
-```
-
-Si ya tienes una versión anterior instalada, instalar un `.deb` con una versión superior actualiza la aplicación.
-
-### Linux usando app-image
-
-Descarga la carpeta `TCP-UDP-Simulator` generada como app-image y ejecuta:
-
-```bash
-./TCP-UDP-Simulator/bin/TCP-UDP-Simulator
-```
-
-La app-image es portable. No actualiza una instalación anterior automáticamente; cada versión puede vivir en su propia carpeta.
-
-### Windows usando `.exe`
-
-Descarga el instalador `.exe` de la versión deseada y ejecútalo.
-
-Si ya existe una versión anterior instalada, el instalador nuevo actualiza la aplicación siempre que mantenga el mismo identificador de actualización configurado en el script de empaquetado.
-
-## Ejecutar en desarrollo
-
-Clona el repositorio y entra en la carpeta del proyecto:
+## Ejecutar en Desarrollo
 
 ```bash
 git clone <URL_DEL_REPOSITORIO>
 cd network_simulator
-```
-
-Ejecuta la aplicación:
-
-```bash
 mvn clean javafx:run
 ```
 
-Ejecuta los tests:
+Ejecutar tests:
 
 ```bash
 mvn test
 ```
 
-## Crear instaladores
+## Instalación Para Usuarios
+
+### Linux Usando `.deb`
+
+```bash
+sudo apt install ./aula-red_<version>-1_amd64.deb
+```
+
+### Linux Usando App Image
+
+Descarga la carpeta `AulaRed` generada como app-image y ejecuta:
+
+```bash
+./AulaRed/bin/AulaRed
+```
+
+### Windows Usando `.exe`
+
+Descarga el instalador `.exe` de la versión deseada y ejecútalo.
+
+## Crear Instaladores
 
 La versión principal se toma de `<version>` en `pom.xml`.
 
@@ -140,8 +157,6 @@ mvn versions:set -DnewVersion=1.0.1
 
 ### Linux
 
-Genera `.deb` y app-image:
-
 ```bash
 ./scripts/package-linux.sh
 ```
@@ -151,15 +166,13 @@ Salida:
 - `artifacts/linux/<version>/deb/`
 - `artifacts/linux/<version>/app-image/`
 
-También puedes indicar una versión concreta para el instalador:
+También puedes indicar una versión concreta:
 
 ```bash
 ./scripts/package-linux.sh 1.0.1
 ```
 
 ### Windows
-
-En PowerShell:
 
 ```powershell
 .\scripts\package-windows.ps1
@@ -177,36 +190,13 @@ También puedes indicar una versión concreta:
 
 Importante: no cambies el `--win-upgrade-uuid` del script entre versiones. Ese valor permite que Windows reconozca una versión nueva como actualización de la aplicación instalada.
 
-## Versionado
-
-El proyecto usa versionado semántico:
-
-- `MAJOR`: cambios incompatibles o rediseños grandes.
-- `MINOR`: nuevas funcionalidades.
-- `PATCH`: correcciones y mejoras pequeñas.
-
-Ejemplos:
-
-- `1.0.0`: primera versión estable.
-- `1.1.0`: nuevas vistas o funcionalidades.
-- `1.1.1`: correcciones visuales o de bugs.
-
-Para publicar una versión:
-
-```bash
-git tag v1.0.1
-git push origin v1.0.1
-```
-
-Después puedes subir los artefactos generados a GitHub Releases.
-
-## Estructura del proyecto
+## Estructura Del Proyecto
 
 ```text
 src/main/java/com/example/simulator/
   app/                  Arranque e integración de la aplicación JavaFX
   application/          Casos de uso y servicios de aplicación
-  domain/               Modelo de dominio y motor de simulación
+  domain/               Modelo de dominio y lógica de red
   infrastructure/       Repositorios y carga de contenido JSON
   presentation/         ViewModels y adaptadores para UI
   ui/                   Componentes JavaFX
@@ -218,15 +208,33 @@ src/main/resources/
 html/
   comparador/           Boceto HTML/CSS del comparador TCP vs UDP
   modelos/              Boceto HTML/CSS de modelos TCP/IP y OSI
+  ip_sprints_1_2_3_pixel/ Bocetos visuales de módulos IP
 
 scripts/
   package-linux.sh      Empaquetado Linux
   package-windows.ps1   Empaquetado Windows
 ```
 
+## Versionado
+
+El proyecto usa versionado semántico:
+
+- `MAJOR`: cambios incompatibles o rediseños grandes.
+- `MINOR`: nuevas funcionalidades.
+- `PATCH`: correcciones y mejoras pequeñas.
+
+Para publicar una versión:
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+Después puedes subir los artefactos generados a GitHub Releases.
+
 ## Colaborar
 
-Las contribuciones son bienvenidas. Puedes colaborar corrigiendo bugs, mejorando la interfaz, añadiendo escenarios, ampliando teoría o escribiendo tests.
+Las contribuciones son bienvenidas: bugs, mejoras de interfaz, nuevos escenarios, ampliación de teoría o tests.
 
 Flujo recomendado:
 
@@ -244,34 +252,12 @@ git checkout -b mejora/nueva-vista
 mvn test
 ```
 
-5. Abre un pull request explicando:
+5. Abre un pull request explicando qué cambia, por qué se cambia y cómo se ha probado.
 
-- Qué cambia.
-- Por qué se cambia.
-- Cómo se ha probado.
-- Capturas si el cambio afecta a la interfaz.
-
-## Buenas prácticas para contribuir
+## Buenas Prácticas
 
 - Mantén los cambios acotados.
 - No mezcles refactors grandes con cambios funcionales.
-- Añade o actualiza tests cuando cambie lógica de simulación.
+- Añade o actualiza tests cuando cambie lógica de red.
 - Si modificas UI, intenta respetar los bocetos de `html/`.
 - No subas instaladores generados al repositorio; usa Releases para publicarlos.
-
-## Uso recomendado en clase
-
-1. Empieza con TCP sin pérdidas para explicar conexión, ACK y cierre.
-2. Reduce el tamaño de fragmento para ver más segmentos.
-3. Sube la pérdida al 30-40% para enseñar retransmisiones.
-4. Repite el escenario con UDP.
-5. Usa el comparador TCP vs UDP para discutir fiabilidad frente a simplicidad.
-6. Cierra con el modelo TCP/IP y OSI para ubicar TCP, UDP, IP y Ethernet en sus capas.
-
-## Autor
-
-Creado por **Raül de Arriba**.
-
-## Licencia
-
-Proyecto open source. Añade un archivo `LICENSE` al repositorio para declarar formalmente la licencia de uso y distribución.

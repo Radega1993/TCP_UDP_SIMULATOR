@@ -7,13 +7,13 @@ import javafx.scene.layout.VBox;
 
 public class SimulatorHeader extends VBox {
     public SimulatorHeader() {
-        Label eyebrow = new Label("SIMULADOR EDUCATIVO");
+        Label eyebrow = new Label("LABORATORIO EDUCATIVO DE REDES");
         eyebrow.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #5f7c9c; -fx-letter-spacing: 1px;");
 
-        Label title = new Label("Simulador visual de TCP y UDP");
+        Label title = new Label("AulaRed");
         title.setStyle("-fx-font-size: 34px; -fx-font-weight: bold; -fx-text-fill: #122033;");
 
-        Label subtitle = new Label("Explora handshake, entrega, pérdidas y retransmisiones con una interfaz pensada para explicar redes en clase.");
+        Label subtitle = new Label("Explora protocolos, capas, direccionamiento IP y subnetting con una interfaz pensada para explicar redes en clase.");
         subtitle.setWrapText(true);
         subtitle.setStyle("-fx-font-size: 14px; -fx-text-fill: #627487;");
 

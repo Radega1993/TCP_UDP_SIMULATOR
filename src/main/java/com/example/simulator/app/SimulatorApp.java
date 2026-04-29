@@ -29,6 +29,7 @@ import com.example.simulator.ui.HomeFooterHint;
 import com.example.simulator.ui.HomeHeroHeader;
 import com.example.simulator.ui.HomeModeCard;
 import com.example.simulator.ui.Ipv4LearningView;
+import com.example.simulator.ui.Ipv6LearningView;
 import com.example.simulator.ui.LayersLearningView;
 import com.example.simulator.ui.MailboxPanel;
 import com.example.simulator.ui.MessageSummaryPanel;
@@ -40,6 +41,7 @@ import com.example.simulator.ui.SimulationViewMode;
 import com.example.simulator.ui.SimulatorHeader;
 import com.example.simulator.ui.SlidingWindowPanel;
 import com.example.simulator.ui.StyledButton;
+import com.example.simulator.ui.SubnettingLearningView;
 import com.example.simulator.ui.StatePanel;
 import com.example.simulator.ui.UiTheme;
 import com.example.simulator.ui.ViewModeToggle;
@@ -108,6 +110,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     private Node layersModeView;
     private Ipv4LearningView ipv4LearningView;
     private Node ipv4ModeView;
+    private Node ipv6ModeView;
+    private SubnettingLearningView subnettingLearningView;
+    private Node subnettingModeView;
     private StackPane modeContentStack;
     private ComboBox<SimulationMode> modeSelector;
     private ComboBox<ProtocolType> protocolSelector;
@@ -181,7 +186,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         UDP,
         COMPARE,
         LAYERS,
-        IPV4
+        IPV4,
+        IPV6,
+        SUBNETTING
     }
 
     @Override
@@ -202,7 +209,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         root.setBottom(buildBottomBar());
 
         Scene scene = new Scene(root, 1500, 860);
-        stage.setTitle("Simulador gráfico TCP y UDP - JavaFX");
+        stage.setTitle("AulaRed - Laboratorio visual de redes");
         stage.setScene(scene);
         loadAppIcon(stage);
         stage.setMaximized(true);
@@ -278,7 +285,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
     private Node buildHomeView() {
         HomeHeroHeader headerCard = new HomeHeroHeader(buildHomeHeaderActions());
 
-        DashboardCard introCard = new DashboardCard("INICIO", "Elige una experiencia de simulación",
+        DashboardCard introCard = new DashboardCard("INICIO", "Elige una experiencia de aprendizaje",
                 "Accede directamente al modo TCP, al modo UDP o a la comparación paralela entre ambos.");
         introCard.setPadding(new Insets(16, 18, 16, 18));
         introCard.setStyle("-fx-background-color: #ffffff;"
@@ -331,7 +338,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 "CAPAS",
                 "Ver modelo TCP/IP y OSI",
                 "Explora capas, encapsulación, cabeceras simplificadas y equivalencias entre modelos.",
-                "Ideal para conectar lo que ves en la simulación con la arquitectura completa de red.",
+                "Ideal para conectar lo que ves en la práctica con la arquitectura completa de red.",
                 "/icons/layers.png",
                 "[#]",
                 "#F08A24",
@@ -353,6 +360,32 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         );
         ipv4Card.setOnMouseClicked(event -> openIpv4Workspace());
 
+        HomeModeCard ipv6Card = new HomeModeCard(
+                "MÓDULO IP",
+                "IPv6 light",
+                "Compara IPv4 e IPv6 y visualiza direcciones de 128 bits por bloques.",
+                "Ideal para preparar un nivel avanzado con unicast y multicast.",
+                "/icons/network.svg",
+                "v6",
+                "#4F46E5",
+                "#19a663",
+                false
+        );
+        ipv6Card.setOnMouseClicked(event -> openIpv6Workspace());
+
+        HomeModeCard subnettingCard = new HomeModeCard(
+                "MÓDULO IP",
+                "Subnetting visual",
+                "Divide una red base en subredes y ve máscara, hosts e incremento al instante.",
+                "Ideal para construir base CCNA sin memorizar fórmulas.",
+                "/icons/binary.svg",
+                "/",
+                "#17A765",
+                "#2F80ED",
+                false
+        );
+        subnettingCard.setOnMouseClicked(event -> openSubnettingWorkspace());
+
         GridPane cards = new GridPane();
         cards.setHgap(20);
         cards.setVgap(20);
@@ -368,7 +401,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         cards.add(comparisonCard, 2, 0);
         cards.add(layersCard, 3, 0);
         cards.add(ipv4Card, 0, 1);
-        for (Node card : List.of(comparisonCard, tcpCard, udpCard, layersCard, ipv4Card)) {
+        cards.add(ipv6Card, 1, 1);
+        cards.add(subnettingCard, 2, 1);
+        for (Node card : List.of(comparisonCard, tcpCard, udpCard, layersCard, ipv4Card, ipv6Card, subnettingCard)) {
             GridPane.setHgrow(card, Priority.ALWAYS);
             GridPane.setFillWidth(card, true);
         }
@@ -404,18 +439,20 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         StyledButton helpButton = new StyledButton("Ayuda", StyledButton.Kind.TERTIARY);
         helpButton.setOnAction(event -> openTextModal(
                 "Ayuda de inicio",
-                "Guía rápida para orientarte en la portada del simulador.",
+                "Guía rápida para orientarte en la portada de AulaRed.",
                 """
                         TCP: explica conexión, ACK y retransmisión.
                         UDP: explica datagramas, pérdidas y baja sobrecarga.
                         TCP vs UDP: compara ambos protocolos con la misma red.
-                        Modelo TCP/IP y OSI: conecta la simulación con la teoría de capas.
+                        Modelo TCP/IP y OSI: conecta la práctica con la teoría de capas.
                         IPv4 y subredes: calcula red, broadcast, rango y decisión de router.
+                        IPv6 light: compara IPv4 vs IPv6 y tipos unicast/multicast.
+                        Subnetting visual: divide redes grandes en subredes pequeñas.
                         """,
                 false
         ));
 
-        StyledButton lastModeButton = new StyledButton("Última simulación", StyledButton.Kind.TERTIARY);
+        StyledButton lastModeButton = new StyledButton("Última práctica", StyledButton.Kind.TERTIARY);
         lastModeButton.setOnAction(event -> {
             if (currentScreen == WorkspaceScreen.TCP) {
                 openSimpleWorkspace(ProtocolType.TCP);
@@ -427,6 +464,10 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 openLayersWorkspace();
             } else if (currentScreen == WorkspaceScreen.IPV4) {
                 openIpv4Workspace();
+            } else if (currentScreen == WorkspaceScreen.IPV6) {
+                openIpv6Workspace();
+            } else if (currentScreen == WorkspaceScreen.SUBNETTING) {
+                openSubnettingWorkspace();
             } else {
                 openComparisonWorkspace();
             }
@@ -553,6 +594,46 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 )
         );
         ipv4ModeView = ipv4LearningView;
+        ipv6ModeView = new Ipv6LearningView(
+                this::showHomeScreen,
+                () -> openTextModal(
+                        "Teoría IPv6",
+                        "Comparativa ligera entre IPv4 e IPv6.",
+                        ipv6TheoryText(),
+                        false
+                ),
+                () -> openTextModal(
+                        "Ayuda IPv6",
+                        "Cómo usar la pantalla IPv6 light.",
+                        """
+                                Observa cómo una dirección IPv6 se divide en 8 bloques hexadecimales.
+                                Compara el tamaño de IPv4 e IPv6.
+                                Revisa los ejemplos de unicast y multicast para distinguir envío a una interfaz o a un grupo.
+                                """,
+                        false
+                )
+        );
+        subnettingLearningView = new SubnettingLearningView(
+                this::showHomeScreen,
+                () -> openTextModal(
+                        "Teoría Subnetting",
+                        "Fundamentos visuales para dividir redes IPv4.",
+                        subnettingTheoryText(),
+                        false
+                ),
+                () -> openTextModal(
+                        "Ayuda Subnetting",
+                        "Cómo usar Subnetting visual básico.",
+                        """
+                                Escribe una red base, por ejemplo 192.168.1.0.
+                                Elige la máscara original.
+                                Decide si quieres calcular por número de subredes o por hosts necesarios.
+                                Observa cómo cambia la nueva máscara, el incremento y la división visual.
+                                """,
+                        false
+                )
+        );
+        subnettingModeView = subnettingLearningView;
         comparisonModeView.setVisible(false);
         comparisonModeView.setManaged(false);
         comparisonModeView.setViewMode(currentViewMode);
@@ -560,9 +641,13 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         layersModeView.setManaged(false);
         ipv4ModeView.setVisible(false);
         ipv4ModeView.setManaged(false);
+        ipv6ModeView.setVisible(false);
+        ipv6ModeView.setManaged(false);
+        subnettingModeView.setVisible(false);
+        subnettingModeView.setManaged(false);
 
-        modeContentStack = new StackPane(simpleModeView, comparisonModeView, layersModeView, ipv4ModeView);
-        workspaceIntroCard = new DashboardCard("ESPACIO DE TRABAJO", "Simulación activa",
+        modeContentStack = new StackPane(simpleModeView, comparisonModeView, layersModeView, ipv4ModeView, ipv6ModeView, subnettingModeView);
+        workspaceIntroCard = new DashboardCard("ESPACIO DE TRABAJO", "Práctica activa",
                 "La configuración se abre en modal y la barra inferior concentra la ejecución y navegación.");
         workspaceIntroCard.setStyle(UiTheme.HERO_CARD);
         workspaceIntroCard.setContent(buildWorkspaceIntroBar());
@@ -708,6 +793,14 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             ipv4ModeView.setVisible(false);
             ipv4ModeView.setManaged(false);
         }
+        if (ipv6ModeView != null) {
+            ipv6ModeView.setVisible(false);
+            ipv6ModeView.setManaged(false);
+        }
+        if (subnettingModeView != null) {
+            subnettingModeView.setVisible(false);
+            subnettingModeView.setManaged(false);
+        }
         if (player != null) {
             player.stop();
         }
@@ -740,6 +833,70 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         updatePlaybackButtons();
     }
 
+    private void openIpv6Workspace() {
+        currentScreen = WorkspaceScreen.IPV6;
+        revealWorkspace();
+        if (simpleModeView != null) {
+            simpleModeView.setVisible(false);
+            simpleModeView.setManaged(false);
+        }
+        if (comparisonModeView != null) {
+            comparisonModeView.setVisible(false);
+            comparisonModeView.setManaged(false);
+            comparisonModeView.stop();
+        }
+        if (layersModeView != null) {
+            layersModeView.setVisible(false);
+            layersModeView.setManaged(false);
+        }
+        if (ipv4ModeView != null) {
+            ipv4ModeView.setVisible(false);
+            ipv4ModeView.setManaged(false);
+        }
+        if (ipv6ModeView != null) {
+            ipv6ModeView.setVisible(true);
+            ipv6ModeView.setManaged(true);
+        }
+        if (player != null) {
+            player.stop();
+        }
+        updatePlaybackButtons();
+    }
+
+    private void openSubnettingWorkspace() {
+        currentScreen = WorkspaceScreen.SUBNETTING;
+        revealWorkspace();
+        if (simpleModeView != null) {
+            simpleModeView.setVisible(false);
+            simpleModeView.setManaged(false);
+        }
+        if (comparisonModeView != null) {
+            comparisonModeView.setVisible(false);
+            comparisonModeView.setManaged(false);
+            comparisonModeView.stop();
+        }
+        if (layersModeView != null) {
+            layersModeView.setVisible(false);
+            layersModeView.setManaged(false);
+        }
+        if (ipv4ModeView != null) {
+            ipv4ModeView.setVisible(false);
+            ipv4ModeView.setManaged(false);
+        }
+        if (ipv6ModeView != null) {
+            ipv6ModeView.setVisible(false);
+            ipv6ModeView.setManaged(false);
+        }
+        if (subnettingModeView != null) {
+            subnettingModeView.setVisible(true);
+            subnettingModeView.setManaged(true);
+        }
+        if (player != null) {
+            player.stop();
+        }
+        updatePlaybackButtons();
+    }
+
     private void revealWorkspace() {
         if (homeView != null) {
             homeView.setVisible(false);
@@ -752,7 +909,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         if (bottomControlBar != null) {
             boolean useEmbeddedTcpBar = currentScreen == WorkspaceScreen.TCP
                     || currentScreen == WorkspaceScreen.UDP
-                    || currentScreen == WorkspaceScreen.IPV4;
+                    || currentScreen == WorkspaceScreen.IPV4
+                    || currentScreen == WorkspaceScreen.IPV6
+                    || currentScreen == WorkspaceScreen.SUBNETTING;
             bottomControlBar.setVisible(!useEmbeddedTcpBar);
             bottomControlBar.setManaged(!useEmbeddedTcpBar);
         }
@@ -761,7 +920,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                     || currentScreen == WorkspaceScreen.UDP
                     || currentScreen == WorkspaceScreen.COMPARE
                     || currentScreen == WorkspaceScreen.LAYERS
-                    || currentScreen == WorkspaceScreen.IPV4;
+                    || currentScreen == WorkspaceScreen.IPV4
+                    || currentScreen == WorkspaceScreen.IPV6
+                    || currentScreen == WorkspaceScreen.SUBNETTING;
             appHeader.setVisible(!compactWorkspace);
             appHeader.setManaged(!compactWorkspace);
         }
@@ -779,7 +940,9 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         boolean embeddedTcpLayout = currentScreen == WorkspaceScreen.TCP
                 || currentScreen == WorkspaceScreen.UDP
                 || currentScreen == WorkspaceScreen.LAYERS
-                || currentScreen == WorkspaceScreen.IPV4;
+                || currentScreen == WorkspaceScreen.IPV4
+                || currentScreen == WorkspaceScreen.IPV6
+                || currentScreen == WorkspaceScreen.SUBNETTING;
         if (workspaceIntroCard != null) {
             workspaceIntroCard.setVisible(!embeddedTcpLayout);
             workspaceIntroCard.setManaged(!embeddedTcpLayout);
@@ -796,7 +959,10 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         if (bottomControlBar == null) {
             return;
         }
-        boolean layersWorkspace = currentScreen == WorkspaceScreen.LAYERS || currentScreen == WorkspaceScreen.IPV4;
+        boolean layersWorkspace = currentScreen == WorkspaceScreen.LAYERS
+                || currentScreen == WorkspaceScreen.IPV4
+                || currentScreen == WorkspaceScreen.IPV6
+                || currentScreen == WorkspaceScreen.SUBNETTING;
         boolean simulationWorkspace = currentScreen == WorkspaceScreen.TCP
                 || currentScreen == WorkspaceScreen.UDP
                 || currentScreen == WorkspaceScreen.COMPARE;
@@ -982,7 +1148,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 + "-fx-background-color: #e8f1ff; -fx-background-radius: 10;"
                 + "-fx-text-fill: #2f80ed; -fx-font-size: 17px; -fx-font-weight: bold; -fx-cursor: hand;");
 
-        Label brand = new Label("Simulador visual de TCP y UDP");
+        Label brand = new Label("AulaRed");
         brand.setStyle("-fx-font-size: 17px; -fx-font-weight: 800; -fx-text-fill: #102a43;");
         HBox brandBox = new HBox(12, menu, brand);
         brandBox.setAlignment(Pos.CENTER_LEFT);
@@ -1484,7 +1650,10 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         if (playPauseButton == null || liveStepButton == null) {
             return;
         }
-        if (currentScreen == WorkspaceScreen.LAYERS || currentScreen == WorkspaceScreen.IPV4) {
+        if (currentScreen == WorkspaceScreen.LAYERS
+                || currentScreen == WorkspaceScreen.IPV4
+                || currentScreen == WorkspaceScreen.IPV6
+                || currentScreen == WorkspaceScreen.SUBNETTING) {
             playPauseButton.setDisable(true);
             liveStepButton.setDisable(true);
             playPauseButton.setText("Pausar");
@@ -1512,13 +1681,15 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         boolean compare = mode == SimulationMode.COMPARE;
         boolean layers = currentScreen == WorkspaceScreen.LAYERS;
         boolean ipv4 = currentScreen == WorkspaceScreen.IPV4;
+        boolean ipv6 = currentScreen == WorkspaceScreen.IPV6;
+        boolean subnetting = currentScreen == WorkspaceScreen.SUBNETTING;
         if (simpleModeView != null) {
-            simpleModeView.setVisible(!compare && !layers && !ipv4);
-            simpleModeView.setManaged(!compare && !layers && !ipv4);
+            simpleModeView.setVisible(!compare && !layers && !ipv4 && !ipv6 && !subnetting);
+            simpleModeView.setManaged(!compare && !layers && !ipv4 && !ipv6 && !subnetting);
         }
         if (comparisonModeView != null) {
-            comparisonModeView.setVisible(compare && !layers && !ipv4);
-            comparisonModeView.setManaged(compare && !layers && !ipv4);
+            comparisonModeView.setVisible(compare && !layers && !ipv4 && !ipv6 && !subnetting);
+            comparisonModeView.setManaged(compare && !layers && !ipv4 && !ipv6 && !subnetting);
         }
         if (layersModeView != null) {
             layersModeView.setVisible(layers);
@@ -1527,6 +1698,14 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         if (ipv4ModeView != null) {
             ipv4ModeView.setVisible(ipv4);
             ipv4ModeView.setManaged(ipv4);
+        }
+        if (ipv6ModeView != null) {
+            ipv6ModeView.setVisible(ipv6);
+            ipv6ModeView.setManaged(ipv6);
+        }
+        if (subnettingModeView != null) {
+            subnettingModeView.setVisible(subnetting);
+            subnettingModeView.setManaged(subnetting);
         }
         if (protocolSelector != null) {
             protocolSelector.setDisable(compare || currentScreen == WorkspaceScreen.TCP || currentScreen == WorkspaceScreen.UDP);
@@ -1549,6 +1728,12 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         if (currentScreen == WorkspaceScreen.IPV4) {
             if (ipv4LearningView != null) {
                 ipv4LearningView.resetInputs();
+            }
+            return;
+        }
+        if (currentScreen == WorkspaceScreen.SUBNETTING) {
+            if (subnettingLearningView != null) {
+                subnettingLearningView.resetInputs();
             }
             return;
         }
@@ -2427,9 +2612,65 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             case COMPARE -> "Guía docente para comparar TCP y UDP con la misma red y el mismo mensaje.";
             case LAYERS -> "Guía docente sobre modelos TCP/IP, OSI, encapsulación y cabeceras.";
             case IPV4 -> "Guía docente para explicar IP, máscara, red y gateway.";
+            case IPV6 -> "Guía docente para introducir IPv6, unicast y multicast.";
+            case SUBNETTING -> "Guía docente para explicar subnetting visual.";
             default -> "Contexto docente asociado al modo de trabajo activo.";
         };
-        openTextModal("Teoría", subtitle, currentScreen == WorkspaceScreen.IPV4 ? ipv4TheoryText() : currentTheoryText, false);
+        String theoryText = currentScreen == WorkspaceScreen.IPV4
+                ? ipv4TheoryText()
+                : currentScreen == WorkspaceScreen.IPV6 ? ipv6TheoryText()
+                : currentScreen == WorkspaceScreen.SUBNETTING ? subnettingTheoryText() : currentTheoryText;
+        openTextModal("Teoría", subtitle, theoryText, false);
+    }
+
+    private String subnettingTheoryText() {
+        return """
+                Qué es subnetting
+                Subnetting consiste en dividir una red grande en redes más pequeñas. Por ejemplo, una /24 puede dividirse en varias /26.
+
+                Por qué se usa
+                Se usa para separar grupos de equipos, reducir dominios de broadcast, organizar VLANs y preparar rutas más claras.
+
+                Bits de red vs host
+                La máscara decide qué bits son de red y qué bits son de host. Al hacer subnetting se prestan bits de host para crear más redes.
+
+                AND lógico
+                Para obtener la red, el equipo compara la IP y la máscara bit a bit. Donde la máscara tiene 1, se conserva la parte de red. Donde tiene 0, queda la parte de host.
+
+                Fórmula de subredes
+                Si prestas n bits, puedes crear 2^n subredes.
+
+                Fórmula de hosts
+                Si quedan h bits para host, cada subred tiene 2^h - 2 hosts útiles. Se restan la IP de red y la IP de broadcast.
+
+                VLSM
+                VLSM permite usar máscaras diferentes dentro del mismo diseño. Primero se asignan las redes grandes y después las pequeñas para aprovechar mejor el espacio de direcciones.
+
+                Incremento
+                El incremento indica cada cuántas direcciones empieza una nueva subred. En /26 el incremento es 64: .0, .64, .128, .192.
+
+                Idea clave
+                Más subredes significa menos hosts por subred. AulaRed lo muestra como bloques para que se vea la división antes de memorizar fórmulas.
+                """;
+    }
+
+    private String ipv6TheoryText() {
+        return """
+                Qué es IPv6
+                IPv6 es la evolución de IP. Usa direcciones de 128 bits, escritas en hexadecimal y separadas por dos puntos.
+
+                IPv4 vs IPv6
+                IPv4 usa 32 bits y se escribe como 192.168.1.10. IPv6 usa 128 bits y puede escribirse como 2001:db8:1::10 cuando se comprime.
+
+                Unicast
+                Una dirección unicast identifica una interfaz concreta. El paquete se entrega a un único destino.
+
+                Multicast
+                Una dirección multicast identifica un grupo. El paquete se entrega a los miembros de ese grupo.
+
+                Idea clave
+                IPv6 no se aprende memorizando direcciones largas: se entiende viendo sus bloques, su tamaño y cómo cambia broadcast por multicast.
+                """;
     }
 
     private String ipv4TheoryText() {
@@ -2466,6 +2707,18 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
 
                 Cómo decide un router
                 El router revisa su tabla de rutas. Si varias filas coinciden con la IP destino, elige la más específica: una ruta /24 gana a una /16, y ambas ganan a la ruta por defecto /0.
+
+                Qué es MTU
+                MTU significa Maximum Transmission Unit. Es el tamaño máximo que un enlace puede transportar en una sola trama.
+
+                Por qué se fragmenta
+                Si un paquete IP es mayor que la MTU del siguiente enlace, IPv4 puede dividirlo en fragmentos. Cada fragmento lleva offset para reconstruir la posición de sus datos y el flag MF para indicar si quedan más fragmentos.
+
+                IP vs MAC
+                La IP sirve para decidir el destino lógico. La MAC sirve para entregar la trama dentro de la red local. ARP une esos dos mundos preguntando qué MAC corresponde a una IP local.
+
+                Qué hace ARP
+                Si el destino está fuera de la red local, el cliente no busca la MAC del servidor: busca la MAC del gateway. Envía un ARP Request por broadcast y guarda el ARP Reply en caché.
 
                 Decisión clave
                 Si red origen y red destino son iguales, el envío es directo. Si son diferentes, el siguiente salto es el gateway o router.

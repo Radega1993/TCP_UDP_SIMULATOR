@@ -5,7 +5,7 @@
   "bullets": [
     "Una latencia alta hace que la respuesta visual y lógica tarde más en aparecer.",
     "TCP y UDP sufren la latencia, pero TCP además arrastra confirmaciones y cierre.",
-    "En este simulador puedes modificarla sin cambiar el protocolo."
+    "En AulaRed puedes modificarla sin cambiar el protocolo."
   ],
   "scenarios": ["*"]
 }

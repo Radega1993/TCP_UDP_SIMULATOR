@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="${ROOT_DIR}/target/dist"
 VERSION="${1:-}"
-APP_NAME="TCP-UDP-Simulator"
-PACKAGE_NAME="tcp-udp-simulator"
+APP_NAME="AulaRed"
+PACKAGE_NAME="aula-red"
 MAIN_CLASS="com.example.simulator.Main"
 
 cd "${ROOT_DIR}"

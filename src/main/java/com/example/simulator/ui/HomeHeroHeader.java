@@ -20,14 +20,14 @@ public class HomeHeroHeader extends VBox {
                 + "-fx-border-width: 1;"
                 + "-fx-effect: dropshadow(gaussian, rgba(37,99,235,0.10), 30, 0.22, 0, 10);");
 
-        Label eyebrow = new Label("SIMULADOR EDUCATIVO");
+        Label eyebrow = new Label("LABORATORIO EDUCATIVO DE REDES");
         eyebrow.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #4F8EF7;");
 
-        Label title = new Label("Simulador visual de TCP y UDP");
+        Label title = new Label("AulaRed");
         title.setWrapText(true);
         title.setStyle("-fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #102A43;");
 
-        Label subtitle = new Label("Explora handshake, entrega, pérdidas y retransmisiones con una interfaz pensada para explicar redes en clase.");
+        Label subtitle = new Label("Aprende TCP, UDP, modelos de capas, IPv4, IPv6 y subnetting con una interfaz pensada para explicar redes en clase.");
         subtitle.setWrapText(true);
         subtitle.setMaxWidth(760);
         subtitle.setStyle("-fx-font-size: 14px; -fx-text-fill: #486581; -fx-line-spacing: 2px;");
@@ -45,7 +45,7 @@ public class HomeHeroHeader extends VBox {
                 + "-fx-background-radius: 999;");
 
         HBox highlights = new HBox(10,
-                metric("4 modos", "#4F8EF7"),
+                metric("Redes guiadas", "#4F8EF7"),
                 metric("Escenarios guiados", "#5BAA4A"),
                 metric("Teoría de capas", "#F08A24")
         );

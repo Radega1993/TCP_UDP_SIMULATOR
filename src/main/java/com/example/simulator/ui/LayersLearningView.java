@@ -92,7 +92,7 @@ public class LayersLearningView extends BorderPane {
         row.setPrefHeight(58);
         row.setStyle("-fx-background-color: #ffffff; -fx-border-color: #d9e6f2; -fx-border-width: 0 0 1 0;");
 
-        Label brand = new Label("☰  Simulador visual de TCP y UDP");
+        Label brand = new Label("☰  AulaRed");
         brand.setStyle("-fx-text-fill: #142d4c; -fx-font-size: 18px; -fx-font-weight: 900;");
         Label mode = pill("Modelo de capas: TCP/IP vs OSI", "#fff2e9", "#f25c05");
         Label ready = pill("✦ Listo para explorar", "#e7f8ef", "#087f4f");
