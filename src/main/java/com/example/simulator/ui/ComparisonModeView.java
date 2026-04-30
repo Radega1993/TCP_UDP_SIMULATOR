@@ -6,6 +6,7 @@ import com.example.simulator.domain.simulation.SimulationResult;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -21,6 +22,13 @@ import java.io.InputStream;
 import java.util.function.Consumer;
 
 public class ComparisonModeView extends VBox {
+    private final Runnable onHome;
+    private final Runnable onReset;
+    private final Runnable onTheory;
+    private final Runnable onHelp;
+    private final Runnable onPlayPause;
+    private final Runnable onStep;
+    private final Consumer<SimulationViewMode> onViewModeChanged;
     private final ComparisonProtocolPane tcpPane;
     private final ComparisonProtocolPane udpPane;
     private final ComparisonSummaryPanel summaryPanel = new ComparisonSummaryPanel();
@@ -37,7 +45,23 @@ public class ComparisonModeView extends VBox {
     private final Label udpRetrans = new Label("-");
     private final Label udpEvents = new Label("-");
 
-    public ComparisonModeView(Consumer<String> packetDetailsOpener) {
+    public ComparisonModeView(
+            Consumer<String> packetDetailsOpener,
+            Runnable onHome,
+            Runnable onReset,
+            Runnable onTheory,
+            Runnable onHelp,
+            Runnable onPlayPause,
+            Runnable onStep,
+            Consumer<SimulationViewMode> onViewModeChanged
+    ) {
+        this.onHome = onHome;
+        this.onReset = onReset;
+        this.onTheory = onTheory;
+        this.onHelp = onHelp;
+        this.onPlayPause = onPlayPause;
+        this.onStep = onStep;
+        this.onViewModeChanged = onViewModeChanged;
         setSpacing(14);
         setPadding(new Insets(0));
         setStyle("-fx-background-color: #f3f7fb;");
@@ -65,7 +89,7 @@ public class ComparisonModeView extends VBox {
         appGrid.add(rightPanel, 2, 0);
         GridPane.setHgrow(mainPanel, Priority.ALWAYS);
 
-        getChildren().setAll(appGrid, buildLegend());
+        getChildren().setAll(buildTopbar(), appGrid, buildLegend());
     }
 
     public void start(SimulationResult tcpResult, SimulationResult udpResult, ComparisonSummary summary, double speedFactor) {
@@ -110,6 +134,47 @@ public class ComparisonModeView extends VBox {
 
     public boolean isPaused() {
         return tcpPane.isPaused() && udpPane.isPaused();
+    }
+
+    private Node buildTopbar() {
+        StackPane menu = new StackPane(icon("/icons/menu.svg", 20));
+        menu.setOnMouseClicked(event -> onHome.run());
+        menu.setStyle("-fx-min-width: 34; -fx-min-height: 34; -fx-alignment: center;"
+                + "-fx-background-color: #e8f1ff; -fx-background-radius: 10; -fx-cursor: hand;");
+        Label brand = new Label("AulaRed");
+        brand.setStyle("-fx-font-size: 17px; -fx-font-weight: 800; -fx-text-fill: #102a43;");
+        HBox brandBox = new HBox(12, menu, brand);
+        brandBox.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(brandBox, Priority.ALWAYS);
+
+        Label modePill = pill("Comparación TCP vs UDP", "#eef2ff", "#4f46e5");
+        Button reset = ghostButton("Reiniciar", "/icons/refresh.svg");
+        reset.setOnAction(event -> onReset.run());
+        Button playPause = ghostButton("Pausar / continuar", "/icons/refresh.svg");
+        playPause.setOnAction(event -> onPlayPause.run());
+        Button step = ghostButton("Paso", "/icons/info.svg");
+        step.setOnAction(event -> onStep.run());
+        Button theory = ghostButton("Teoría", "/icons/info.svg");
+        theory.setOnAction(event -> onTheory.run());
+        Button help = ghostButton("Ayuda", "/icons/help.svg");
+        help.setOnAction(event -> onHelp.run());
+
+        ViewModeToggle viewModeToggle = new ViewModeToggle();
+        viewModeToggle.setOnModeChanged(mode -> {
+            setViewMode(mode);
+            onViewModeChanged.accept(mode);
+        });
+
+        HBox actions = new HBox(8, reset, playPause, step, theory, help);
+        actions.setAlignment(Pos.CENTER_LEFT);
+        HBox topbar = new HBox(16, brandBox, modePill, viewModeToggle, actions);
+        topbar.setAlignment(Pos.CENTER_LEFT);
+        topbar.setPadding(new Insets(0, 18, 0, 18));
+        topbar.setMinHeight(58);
+        topbar.setStyle("-fx-background-color: #ffffff;"
+                + "-fx-border-color: transparent transparent #d9e6f2 transparent;"
+                + "-fx-border-width: 0 0 1 0; -fx-effect: dropshadow(gaussian, rgba(17,42,67,0.04), 12, 0.2, 0, 2);");
+        return topbar;
     }
 
     private VBox buildLeftPanel() {
@@ -256,6 +321,42 @@ public class ComparisonModeView extends VBox {
         Label subtitleLabel = new Label(subtitle);
         subtitleLabel.setStyle("-fx-text-fill: #5f7390; -fx-font-size: 12px;");
         return new HBox(12, iconBox, new VBox(2, titleLabel, subtitleLabel));
+    }
+
+    private Node icon(String iconPath, double size) {
+        try (InputStream stream = getClass().getResourceAsStream(iconPath.endsWith(".svg")
+                ? iconPath.substring(0, iconPath.length() - 4) + ".png"
+                : iconPath)) {
+            if (stream != null) {
+                ImageView view = new ImageView(new Image(stream));
+                view.setFitWidth(size);
+                view.setFitHeight(size);
+                view.setPreserveRatio(true);
+                return view;
+            }
+        } catch (Exception ignored) {
+        }
+        Label fallback = new Label("•");
+        fallback.setStyle("-fx-text-fill: #2f80ed; -fx-font-weight: 900;");
+        return fallback;
+    }
+
+    private Label pill(String text, String background, String color) {
+        Label label = new Label(text);
+        label.setStyle("-fx-background-color: " + background + "; -fx-text-fill: " + color + ";"
+                + "-fx-background-radius: 999; -fx-padding: 7 16 7 16; -fx-font-weight: 900;");
+        return label;
+    }
+
+    private Button ghostButton(String text, String iconPath) {
+        Button button = new Button(text);
+        button.setGraphic(icon(iconPath, 16));
+        button.setGraphicTextGap(8);
+        button.setMinHeight(38);
+        button.setStyle("-fx-background-color: #ffffff; -fx-border-color: #d9e6f2;"
+                + "-fx-background-radius: 8; -fx-border-radius: 8;"
+                + "-fx-text-fill: #173452; -fx-font-weight: 800; -fx-padding: 0 14 0 14;");
+        return button;
     }
 
     private Node metricCard(String title, Label value, String accent) {

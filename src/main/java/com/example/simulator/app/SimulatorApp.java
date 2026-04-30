@@ -565,13 +565,28 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 "Lectura puntual del paquete seleccionado.",
                 details,
                 true
-        ));
+        ),
+                this::showHomeScreen,
+                this::resetActiveMode,
+                this::openTheoryModal,
+                this::openComparisonHelp,
+                this::togglePlaybackPause,
+                () -> {
+                    comparisonModeView.stepForward();
+                    updatePlaybackButtons();
+                },
+                this::applySimulationViewMode
+        );
         layersLearningView = new LayersLearningView(details -> openTextModal(
                 "Estructura interna del paquete",
                 "Vista didáctica de encapsulación y cabeceras simplificadas.",
                 details,
                 true
-        ));
+        ),
+                this::showHomeScreen,
+                this::openTheoryModal,
+                this::openLayersHelp
+        );
         layersModeView = layersLearningView;
         ipv4LearningView = new Ipv4LearningView(
                 this::showHomeScreen,
@@ -771,6 +786,23 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         revealWorkspace();
     }
 
+    private void openComparisonHelp() {
+        openTextModal(
+                "Ayuda Comparación TCP vs UDP",
+                "Qué controles tienen sentido en este módulo.",
+                """
+                        Reiniciar: detiene la comparación y prepara una nueva ejecución.
+                        Pausar / continuar: controla ambas simulaciones a la vez.
+                        Paso: avanza TCP y UDP en paralelo para comparar evento a evento.
+                        Vista: cambia la representación visual de los dos protocolos.
+                        Teoría: abre la guía docente de TCP frente a UDP.
+
+                        No se muestra configuración avanzada en el navbar porque ya vive en el panel lateral común.
+                        """,
+                false
+        );
+    }
+
     private void openLayersWorkspace() {
         currentScreen = WorkspaceScreen.LAYERS;
         refreshTheoryPanel();
@@ -805,6 +837,21 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             player.stop();
         }
         updatePlaybackButtons();
+    }
+
+    private void openLayersHelp() {
+        openTextModal(
+                "Ayuda Modelos TCP/IP y OSI",
+                "Qué controles tienen sentido en este módulo.",
+                """
+                        Reiniciar vista: vuelve a la comparación de modelos con nivel básico, TCP y mensaje de ejemplo.
+                        Teoría: abre la guía docente de capas, encapsulación y cabeceras.
+                        Ayuda: muestra esta orientación.
+
+                        No hay pausar, paso ni velocidad porque esta pantalla no reproduce una simulación temporal.
+                        """,
+                false
+        );
     }
 
     private void openIpv4Workspace() {
@@ -909,6 +956,8 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
         if (bottomControlBar != null) {
             boolean useEmbeddedTcpBar = currentScreen == WorkspaceScreen.TCP
                     || currentScreen == WorkspaceScreen.UDP
+                    || currentScreen == WorkspaceScreen.COMPARE
+                    || currentScreen == WorkspaceScreen.LAYERS
                     || currentScreen == WorkspaceScreen.IPV4
                     || currentScreen == WorkspaceScreen.IPV6
                     || currentScreen == WorkspaceScreen.SUBNETTING;
@@ -939,6 +988,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
                 || currentScreen == WorkspaceScreen.COMPARE;
         boolean embeddedTcpLayout = currentScreen == WorkspaceScreen.TCP
                 || currentScreen == WorkspaceScreen.UDP
+                || currentScreen == WorkspaceScreen.COMPARE
                 || currentScreen == WorkspaceScreen.LAYERS
                 || currentScreen == WorkspaceScreen.IPV4
                 || currentScreen == WorkspaceScreen.IPV6
@@ -960,6 +1010,7 @@ public class SimulatorApp extends Application implements SimulationPlaybackListe
             return;
         }
         boolean layersWorkspace = currentScreen == WorkspaceScreen.LAYERS
+                || currentScreen == WorkspaceScreen.COMPARE
                 || currentScreen == WorkspaceScreen.IPV4
                 || currentScreen == WorkspaceScreen.IPV6
                 || currentScreen == WorkspaceScreen.SUBNETTING;

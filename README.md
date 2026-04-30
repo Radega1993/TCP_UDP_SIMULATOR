@@ -19,6 +19,7 @@ AulaRed funciona como una aplicación de escritorio modular para aprender redes 
 - ARP request, ARP reply y caché ARP.
 - IPv6 light con comparativa IPv4 vs IPv6.
 - Módulo Subnetting con calculadora, binario y práctica aplicada.
+- Licencia open source MIT.
 
 ## Módulos
 
@@ -88,7 +89,8 @@ AulaRed funciona como una aplicación de escritorio modular para aprender redes 
   - Empresa con redes separadas.
 - Drag and drop de bloques de red hacia departamentos.
 - Feedback correcto/incorrecto.
-- Introducción a VLSM.
+- VLSM con asignación automática de redes por hosts requeridos.
+- Integración de subnetting con routing y TTL entre subredes.
 
 ## Requisitos
 
@@ -261,3 +263,7 @@ mvn test
 - Añade o actualiza tests cuando cambie lógica de red.
 - Si modificas UI, intenta respetar los bocetos de `html/`.
 - No subas instaladores generados al repositorio; usa Releases para publicarlos.
+
+## Licencia
+
+AulaRed se publica bajo licencia MIT. Consulta el fichero [LICENSE](LICENSE).

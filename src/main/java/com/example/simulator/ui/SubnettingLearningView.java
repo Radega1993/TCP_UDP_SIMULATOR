@@ -5,6 +5,14 @@ import com.example.simulator.domain.subnetting.SubnetBlock;
 import com.example.simulator.domain.subnetting.SubnettingCalculator;
 import com.example.simulator.domain.subnetting.SubnettingMode;
 import com.example.simulator.domain.subnetting.SubnettingResult;
+import com.example.simulator.domain.subnetting.SubnetRoutingHop;
+import com.example.simulator.domain.subnetting.SubnetRoutingResult;
+import com.example.simulator.domain.subnetting.SubnetRoutingRoute;
+import com.example.simulator.domain.subnetting.SubnetRoutingSimulator;
+import com.example.simulator.domain.subnetting.VlsmAssignment;
+import com.example.simulator.domain.subnetting.VlsmCalculator;
+import com.example.simulator.domain.subnetting.VlsmNetworkRequest;
+import com.example.simulator.domain.subnetting.VlsmResult;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -35,6 +43,10 @@ public class SubnettingLearningView extends VBox {
     private final ToggleGroup practiceScenarioGroup = new ToggleGroup();
     private final ToggleButton officeScenarioButton = new ToggleButton("Oficina");
     private final ToggleButton companyScenarioButton = new ToggleButton("Empresa");
+    private final ToggleGroup moduleTabGroup = new ToggleGroup();
+    private final ToggleButton subnettingTabButton = new ToggleButton("Subnetting");
+    private final ToggleButton vlsmTabButton = new ToggleButton("VLSM");
+    private final StackPane moduleContentStack = new StackPane();
     private final Spinner<Integer> targetSpinner = new Spinner<>(1, 4096, 4);
     private final Label statusLabel = new Label();
     private final Label newMaskLabel = new Label();
@@ -48,6 +60,18 @@ public class SubnettingLearningView extends VBox {
     private final FlowPane practiceBlocks = new FlowPane(8, 8);
     private final VBox practiceTargets = new VBox(8);
     private final Label practiceFeedback = new Label();
+    private final TextArea vlsmRequestsArea = new TextArea("Red A, 100\nRed B, 50\nRed C, 10");
+    private final Label vlsmStatusLabel = new Label();
+    private final Label vlsmUsageLabel = new Label();
+    private final FlowPane vlsmTimeline = new FlowPane(8, 8);
+    private final VBox vlsmRows = new VBox(8);
+    private final VBox vlsmSteps = new VBox(8);
+    private final Spinner<Integer> subnetRoutingTtlSpinner = new Spinner<>(1, 255, 4);
+    private final Label subnetRoutingStatusLabel = new Label();
+    private final Label subnetRoutingPathLabel = new Label();
+    private final HBox subnetRoutingMap = new HBox(10);
+    private final VBox subnetRoutingHops = new VBox(8);
+    private final VBox subnetRoutingRoutes = new VBox(8);
     private final VBox subnetRows = new VBox(8);
     private final Label tableNote = new Label();
     private final Map<Integer, Node> subnetBarNodes = new HashMap<>();
@@ -64,16 +88,21 @@ public class SubnettingLearningView extends VBox {
         decimalViewButton.setToggleGroup(bitViewGroup);
         officeScenarioButton.setToggleGroup(practiceScenarioGroup);
         companyScenarioButton.setToggleGroup(practiceScenarioGroup);
+        subnettingTabButton.setToggleGroup(moduleTabGroup);
+        vlsmTabButton.setToggleGroup(moduleTabGroup);
         bySubnets.setSelected(true);
         binaryViewButton.setSelected(true);
         officeScenarioButton.setSelected(true);
+        subnettingTabButton.setSelected(true);
         activeScenario = officeScenario();
         baseCidrSpinner.setEditable(true);
         targetSpinner.setEditable(true);
+        subnetRoutingTtlSpinner.setEditable(true);
         getChildren().addAll(buildTopbar(onHome, onTheory, onHelp), buildContent());
         addImmediateFeedback();
         renderPractice();
         calculateAndRender();
+        calculateAndRenderVlsm();
     }
 
     public void resetInputs() {
@@ -117,9 +146,52 @@ public class SubnettingLearningView extends VBox {
         layout.setPadding(new Insets(0, 14, 0, 14));
         layout.getColumnConstraints().setAll(fixedColumn(330), growingColumn(840), fixedColumn(360));
         layout.add(buildConfigCard(), 0, 0);
-        layout.add(new VBox(14, buildVisualCard(), buildBinaryCard(), buildPracticeCard(), buildSubnetListCard()), 1, 0);
+        layout.add(buildTabbedModuleContent(), 1, 0);
         layout.add(buildTheoryCard(), 2, 0);
         return layout;
+    }
+
+    private Node buildTabbedModuleContent() {
+        VBox subnettingContent = new VBox(14, buildVisualCard(), buildBinaryCard(), buildPracticeCard(), buildSubnetListCard());
+        VBox vlsmContent = new VBox(14, buildVlsmCard(), buildSubnetRoutingCard());
+        moduleContentStack.getChildren().setAll(subnettingContent, vlsmContent);
+        configureModuleTabs(subnettingContent, vlsmContent);
+        return new VBox(12, buildModuleTabs(), moduleContentStack);
+    }
+
+    private Node buildModuleTabs() {
+        subnettingTabButton.setMinHeight(40);
+        vlsmTabButton.setMinHeight(40);
+        subnettingTabButton.setGraphic(icon("/icons/network.svg", 16));
+        vlsmTabButton.setGraphic(icon("/icons/router.svg", 16));
+        subnettingTabButton.setGraphicTextGap(8);
+        vlsmTabButton.setGraphicTextGap(8);
+        HBox tabs = new HBox(8, subnettingTabButton, vlsmTabButton);
+        tabs.setAlignment(Pos.CENTER_LEFT);
+        tabs.setPadding(new Insets(2, 0, 0, 0));
+        tabs.setStyle("-fx-background-color: transparent;");
+        return tabs;
+    }
+
+    private void configureModuleTabs(Node subnettingContent, Node vlsmContent) {
+        moduleTabGroup.selectedToggleProperty().addListener((obs, old, selected) -> {
+            if (selected == null) {
+                moduleTabGroup.selectToggle(old);
+                return;
+            }
+            showModuleTab(subnettingContent, vlsmContent);
+        });
+        showModuleTab(subnettingContent, vlsmContent);
+    }
+
+    private void showModuleTab(Node subnettingContent, Node vlsmContent) {
+        boolean showSubnetting = subnettingTabButton.isSelected();
+        subnettingContent.setVisible(showSubnetting);
+        subnettingContent.setManaged(showSubnetting);
+        vlsmContent.setVisible(!showSubnetting);
+        vlsmContent.setManaged(!showSubnetting);
+        subnettingTabButton.setStyle(toggleStyle(showSubnetting));
+        vlsmTabButton.setStyle(toggleStyle(!showSubnetting));
     }
 
     private Node buildConfigCard() {
@@ -209,6 +281,68 @@ public class SubnettingLearningView extends VBox {
         return card;
     }
 
+    private Node buildVlsmCard() {
+        DashboardCard card = new DashboardCard("VLSM", "Asignación automática", "Ordena por tamaño y reparte subredes con máscaras variables.");
+        card.setStyle(cardStyle());
+        vlsmRequestsArea.setMinHeight(100);
+        vlsmRequestsArea.setPrefRowCount(4);
+        vlsmRequestsArea.setWrapText(true);
+        vlsmRequestsArea.setStyle("-fx-background-color: #ffffff; -fx-border-color: #d9e6f2;"
+                + "-fx-border-radius: 8; -fx-background-radius: 8; -fx-font-family: 'Monospaced';"
+                + "-fx-text-fill: #173452; -fx-font-weight: 800;");
+        Button demo = ghostButton("Ejemplo", "/icons/refresh.svg");
+        demo.setOnAction(event -> {
+            vlsmRequestsArea.setText("Red A, 100\nRed B, 50\nRed C, 10");
+            calculateAndRenderVlsm();
+        });
+        Button calculate = new Button("Asignar VLSM");
+        calculate.setGraphic(icon("/icons/check.svg", 16));
+        calculate.setGraphicTextGap(8);
+        calculate.setMinHeight(38);
+        calculate.setStyle("-fx-background-color: #173452; -fx-text-fill: white; -fx-font-weight: 900;"
+                + "-fx-background-radius: 8; -fx-padding: 0 14 0 14;");
+        calculate.setOnAction(event -> calculateAndRenderVlsm());
+        HBox controls = new HBox(8, demo, calculate, vlsmStatusLabel);
+        controls.setAlignment(Pos.CENTER_LEFT);
+        vlsmUsageLabel.setWrapText(true);
+        vlsmUsageLabel.setStyle("-fx-text-fill: #5f7390; -fx-font-size: 12px; -fx-font-weight: 900;");
+        vlsmTimeline.setPrefWrapLength(820);
+        vlsmRequestsArea.textProperty().addListener((obs, old, value) -> calculateAndRenderVlsm());
+        VBox table = new VBox(8, vlsmTableHeader(), vlsmRows);
+        VBox lower = new VBox(12, table, new VBox(8, fieldLabel("Paso a paso"), vlsmSteps));
+        table.setMinWidth(610);
+        card.setContent(new VBox(10,
+                fieldLabel("Redes requeridas (nombre, hosts)"),
+                vlsmRequestsArea,
+                controls,
+                vlsmUsageLabel,
+                vlsmTimeline,
+                lower
+        ));
+        return card;
+    }
+
+    private Node buildSubnetRoutingCard() {
+        DashboardCard card = new DashboardCard("ROUTING", "Subredes conectadas", "Usa las subredes VLSM para ver rutas y TTL entre redes distintas.");
+        card.setStyle(cardStyle());
+        subnetRoutingTtlSpinner.setMinHeight(38);
+        subnetRoutingTtlSpinner.setMaxWidth(120);
+        subnetRoutingTtlSpinner.valueProperty().addListener((obs, old, value) -> calculateAndRenderVlsm());
+        HBox controls = new HBox(10, fieldLabel("TTL"), subnetRoutingTtlSpinner, subnetRoutingStatusLabel);
+        controls.setAlignment(Pos.CENTER_LEFT);
+        subnetRoutingPathLabel.setWrapText(true);
+        subnetRoutingPathLabel.setStyle("-fx-text-fill: #5f7390; -fx-font-size: 12px; -fx-font-weight: 900;");
+        subnetRoutingMap.setAlignment(Pos.CENTER_LEFT);
+        subnetRoutingMap.setMinHeight(136);
+        HBox lists = new HBox(14,
+                new VBox(8, fieldLabel("Saltos entre subredes"), subnetRoutingHops),
+                new VBox(8, fieldLabel("Tabla de rutas del router"), subnetRoutingRoutes)
+        );
+        lists.setAlignment(Pos.TOP_LEFT);
+        card.setContent(new VBox(10, controls, subnetRoutingPathLabel, subnetRoutingMap, lists));
+        return card;
+    }
+
     private Node buildSubnetListCard() {
         DashboardCard card = new DashboardCard("SUBREDES", "Tabla calculada", "Pasa el ratón por una fila para resaltarla en el diagrama.");
         card.setStyle(cardStyle());
@@ -265,8 +399,10 @@ public class SubnettingLearningView extends VBox {
             render(result);
             statusLabel.setText("Listo para dividir");
             statusLabel.setStyle(pillStyle("#e7f8ef", "#087f4f"));
+            calculateAndRenderVlsm();
         } catch (IllegalArgumentException ex) {
             renderError(ex.getMessage());
+            renderVlsmError(ex.getMessage());
         }
     }
 
@@ -362,6 +498,245 @@ public class SubnettingLearningView extends VBox {
         practiceBlocks.getChildren().setAll(activeScenario.choices().stream().map(this::networkChoiceNode).toArray(Node[]::new));
         practiceTargets.getChildren().setAll(activeScenario.targets().stream().map(this::practiceTargetNode).toArray(Node[]::new));
         updatePracticeFeedback();
+    }
+
+    private void calculateAndRenderVlsm() {
+        try {
+            VlsmResult result = VlsmCalculator.calculate(
+                    baseNetworkField.getText(),
+                    baseCidrSpinner.getValue(),
+                    parseVlsmRequests(vlsmRequestsArea.getText())
+            );
+            renderVlsm(result);
+            vlsmStatusLabel.setText("Asignación óptima");
+            vlsmStatusLabel.setStyle(pillStyle("#e7f8ef", "#087f4f"));
+        } catch (IllegalArgumentException ex) {
+            renderVlsmError(ex.getMessage());
+        }
+    }
+
+    private List<VlsmNetworkRequest> parseVlsmRequests(String raw) {
+        return raw.lines()
+                .map(String::trim)
+                .filter(line -> !line.isBlank())
+                .map(this::parseVlsmLine)
+                .toList();
+    }
+
+    private VlsmNetworkRequest parseVlsmLine(String line) {
+        String normalized = line.replace("→", ",").replace("->", ",").replace(":", ",");
+        String[] parts = normalized.split(",");
+        if (parts.length != 2) {
+            throw new IllegalArgumentException("Formato VLSM: una línea por red, por ejemplo 'Red A, 100'.");
+        }
+        try {
+            return new VlsmNetworkRequest(parts[0], Integer.parseInt(parts[1].trim()));
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("Los hosts de VLSM deben ser números.");
+        }
+    }
+
+    private void renderVlsm(VlsmResult result) {
+        vlsmUsageLabel.setText("Base " + result.baseNetwork() + "/" + result.baseCidr()
+                + " · usadas " + result.usedAddresses() + " direcciones"
+                + " · libres " + result.freeAddresses() + " direcciones");
+        vlsmTimeline.getChildren().setAll(result.assignments().stream()
+                .map(assignment -> vlsmTimelineBlock(assignment, result.baseBlockSize()))
+                .toArray(Node[]::new));
+        vlsmRows.getChildren().setAll(result.assignments().stream()
+                .map(this::vlsmRow)
+                .toArray(Node[]::new));
+        vlsmSteps.getChildren().setAll(result.assignments().stream()
+                .map(this::vlsmStep)
+                .toArray(Node[]::new));
+        renderSubnetRouting(result);
+    }
+
+    private void renderVlsmError(String message) {
+        vlsmStatusLabel.setText("Revisa VLSM");
+        vlsmStatusLabel.setStyle(pillStyle("#fff0f0", "#b91c1c"));
+        vlsmUsageLabel.setText(message);
+        vlsmTimeline.getChildren().setAll(emptyHint(message));
+        vlsmRows.getChildren().setAll(emptyHint("No se puede generar la tabla VLSM hasta corregir los datos."));
+        vlsmSteps.getChildren().setAll(emptyHint("VLSM asigna primero las redes con más hosts."));
+        renderSubnetRoutingError(message);
+    }
+
+    private void renderSubnetRouting(VlsmResult result) {
+        try {
+            SubnetRoutingResult routing = SubnetRoutingSimulator.simulate(result, subnetRoutingTtlSpinner.getValue());
+            subnetRoutingStatusLabel.setText(routing.ttlExpired() ? "TTL expirado" : "Ruta completa");
+            subnetRoutingStatusLabel.setStyle(pillStyle(routing.ttlExpired() ? "#fff0f0" : "#e7f8ef",
+                    routing.ttlExpired() ? "#b91c1c" : "#087f4f"));
+            subnetRoutingPathLabel.setText(routing.sourceSubnet() + " → Router R1/R2 → " + routing.destinationSubnet()
+                    + " · Host origen " + routing.sourceHost() + " · Host destino " + routing.destinationHost());
+            subnetRoutingMap.getChildren().setAll(
+                    subnetNode("Subred origen", routing.sourceSubnet(), routing.sourceHost(), "/icons/pc.svg", "#eaf4ff", "#1d4ed8"),
+                    mapArrow(),
+                    subnetNode("Router R1", "GW " + routing.sourceGateway(), "eth0 / eth1", "/icons/router.svg", "#f6f0ff", "#8a55e6"),
+                    mapArrow(),
+                    subnetNode("Router R2", "GW " + routing.destinationGateway(), "tránsito 10.10.10.0/30", "/icons/router.svg", "#fff7e8", "#b45309"),
+                    mapArrow(),
+                    subnetNode("Subred destino", routing.destinationSubnet(), routing.destinationHost(), "/icons/server.svg", "#e7f8ef", "#087f4f")
+            );
+            subnetRoutingHops.getChildren().setAll(routing.hops().stream().map(this::subnetRoutingHopRow).toArray(Node[]::new));
+            subnetRoutingRoutes.getChildren().setAll(subnetRouteTable(routing));
+        } catch (IllegalArgumentException ex) {
+            renderSubnetRoutingError(ex.getMessage());
+        }
+    }
+
+    private void renderSubnetRoutingError(String message) {
+        subnetRoutingStatusLabel.setText("Sin ruta");
+        subnetRoutingStatusLabel.setStyle(pillStyle("#fff0f0", "#b91c1c"));
+        subnetRoutingPathLabel.setText(message);
+        subnetRoutingMap.getChildren().setAll(emptyHint("Calcula al menos dos subredes VLSM para construir el mapa de routing."));
+        subnetRoutingHops.getChildren().setAll(emptyHint("Los saltos aparecerán cuando haya subred origen y destino."));
+        subnetRoutingRoutes.getChildren().setAll(emptyHint("La tabla se genera desde las subredes calculadas."));
+    }
+
+    private Node vlsmTimelineBlock(VlsmAssignment assignment, long baseBlockSize) {
+        Label name = new Label(assignment.name());
+        name.setStyle("-fx-font-weight: 900; -fx-text-fill: #075f3b;");
+        Label network = new Label(assignment.network() + "/" + assignment.cidr());
+        network.setStyle("-fx-font-family: 'Monospaced'; -fx-font-weight: 900; -fx-text-fill: #173452;");
+        Label hosts = new Label(assignment.requiredHosts() + " hosts");
+        hosts.setStyle("-fx-text-fill: #5f7390; -fx-font-size: 12px; -fx-font-weight: 800;");
+        VBox box = new VBox(4, name, network, hosts);
+        box.setAlignment(Pos.CENTER);
+        box.setPadding(new Insets(10));
+        double width = Math.max(118, Math.min(260, 780.0 * assignment.blockSize() / Math.max(1, baseBlockSize)));
+        box.setMinWidth(width);
+        box.setStyle("-fx-background-color: #e7f8ef; -fx-border-color: #17a765;"
+                + "-fx-background-radius: 10; -fx-border-radius: 10; -fx-border-width: 1;");
+        return box;
+    }
+
+    private Node vlsmRow(VlsmAssignment assignment) {
+        HBox row = new HBox(8,
+                tableCell(String.valueOf(assignment.order()), 48, false),
+                tableCell(assignment.name(), 92, false),
+                tableCell(String.valueOf(assignment.requiredHosts()), 74, false),
+                tableCell(assignment.network() + "/" + assignment.cidr(), 142, false),
+                tableCell(assignment.firstHost(), 124, false),
+                tableCell(assignment.lastHost(), 124, false),
+                tableCell(assignment.broadcast(), 124, false)
+        );
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setPadding(new Insets(10));
+        row.setStyle(subnetRowStyle(false));
+        return row;
+    }
+
+    private Node vlsmTableHeader() {
+        HBox header = new HBox(8,
+                tableCell("Orden", 48, true),
+                tableCell("Red", 92, true),
+                tableCell("Hosts", 74, true),
+                tableCell("Network", 142, true),
+                tableCell("First Host", 124, true),
+                tableCell("Last Host", 124, true),
+                tableCell("Broadcast", 124, true)
+        );
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.setPadding(new Insets(0, 10, 0, 10));
+        return header;
+    }
+
+    private Node vlsmStep(VlsmAssignment assignment) {
+        Label step = new Label(assignment.order() + ". " + assignment.explanation());
+        step.setWrapText(true);
+        step.setStyle("-fx-background-color: #f8fbff; -fx-border-color: #d9e6f2;"
+                + "-fx-background-radius: 10; -fx-border-radius: 10; -fx-padding: 10;"
+                + "-fx-text-fill: #173452; -fx-font-weight: 800;");
+        return step;
+    }
+
+    private Node subnetNode(String title, String network, String detail, String iconPath, String background, String color) {
+        Label titleLabel = new Label(title);
+        titleLabel.setStyle("-fx-font-weight: 900; -fx-text-fill: " + color + ";");
+        Label networkLabel = new Label(network);
+        networkLabel.setWrapText(true);
+        networkLabel.setStyle("-fx-font-family: 'Monospaced'; -fx-font-weight: 900; -fx-text-fill: #173452;");
+        Label detailLabel = new Label(detail);
+        detailLabel.setWrapText(true);
+        detailLabel.setStyle("-fx-text-fill: #5f7390; -fx-font-size: 12px; -fx-font-weight: 800;");
+        VBox text = new VBox(3, titleLabel, networkLabel, detailLabel);
+        HBox box = new HBox(8, icon(iconPath, 28), text);
+        box.setAlignment(Pos.CENTER_LEFT);
+        box.setPadding(new Insets(10));
+        box.setMinWidth(150);
+        box.setMaxWidth(190);
+        box.setStyle("-fx-background-color: " + background + "; -fx-border-color: " + color + ";"
+                + "-fx-background-radius: 10; -fx-border-radius: 10; -fx-border-width: 1;");
+        return box;
+    }
+
+    private Node mapArrow() {
+        Label arrow = new Label("→");
+        arrow.setStyle("-fx-text-fill: #5f7390; -fx-font-size: 24px; -fx-font-weight: 900;");
+        return arrow;
+    }
+
+    private Node subnetRoutingHopRow(SubnetRoutingHop hop) {
+        Label number = new Label(String.valueOf(hop.hop()));
+        number.setAlignment(Pos.CENTER);
+        number.setMinSize(30, 30);
+        number.setMaxSize(30, 30);
+        number.setStyle("-fx-background-color: " + (hop.delivered() ? "#e7f8ef" : "#fff0f0") + ";"
+                + "-fx-text-fill: " + (hop.delivered() ? "#087f4f" : "#b91c1c") + ";"
+                + "-fx-background-radius: 999; -fx-font-weight: 900;");
+        Label title = new Label(hop.device() + " · " + hop.networkInterface());
+        title.setStyle("-fx-text-fill: #173452; -fx-font-weight: 900;");
+        Label network = new Label(hop.network() + " → " + hop.nextHop());
+        network.setWrapText(true);
+        network.setStyle("-fx-font-family: 'Monospaced'; -fx-text-fill: #294766; -fx-font-weight: 800;");
+        Label ttl = new Label("TTL: " + hop.ttlBefore() + " → " + hop.ttlAfter());
+        ttl.setStyle(packetBadgeStyle(hop.delivered() ? "#f8fbff" : "#fff0f0", hop.delivered() ? "#345573" : "#b91c1c"));
+        Label detail = new Label(hop.detail());
+        detail.setWrapText(true);
+        detail.setStyle("-fx-text-fill: #5f7390;");
+        VBox text = new VBox(3, title, network, ttl, detail);
+        HBox row = new HBox(10, number, text);
+        row.setAlignment(Pos.TOP_LEFT);
+        row.setPadding(new Insets(10));
+        row.setStyle("-fx-background-color: #fbfdff; -fx-border-color: #d9e6f2;"
+                + "-fx-background-radius: 10; -fx-border-radius: 10;");
+        HBox.setHgrow(text, Priority.ALWAYS);
+        return row;
+    }
+
+    private Node[] subnetRouteTable(SubnetRoutingResult routing) {
+        Node[] nodes = new Node[routing.routes().size() + 1];
+        nodes[0] = subnetRouteHeader();
+        for (int index = 0; index < routing.routes().size(); index++) {
+            nodes[index + 1] = subnetRouteRow(routing.routes().get(index));
+        }
+        return nodes;
+    }
+
+    private Node subnetRouteHeader() {
+        HBox row = new HBox(8,
+                tableCell("Destino", 128, true),
+                tableCell("Gateway", 102, true),
+                tableCell("Interfaz", 70, true)
+        );
+        row.setAlignment(Pos.CENTER_LEFT);
+        return row;
+    }
+
+    private Node subnetRouteRow(SubnetRoutingRoute route) {
+        HBox row = new HBox(8,
+                tableCell(route.destinationCidr(), 128, false),
+                tableCell(route.gateway(), 102, false),
+                tableCell(route.networkInterface(), 70, false)
+        );
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setPadding(new Insets(8));
+        row.setStyle(route.selected()
+                ? "-fx-background-color: #e7f8ef; -fx-border-color: #17a765; -fx-background-radius: 10; -fx-border-radius: 10;"
+                : "-fx-background-color: #fbfdff; -fx-border-color: #d9e6f2; -fx-background-radius: 10; -fx-border-radius: 10;");
+        return row;
     }
 
     private Node networkChoiceNode(NetworkChoice choice) {
@@ -711,6 +1086,11 @@ public class SubnettingLearningView extends VBox {
     private String pillStyle(String background, String color) {
         return "-fx-background-color: " + background + "; -fx-text-fill: " + color + ";"
                 + "-fx-background-radius: 999; -fx-padding: 7 16 7 16; -fx-font-weight: 900;";
+    }
+
+    private String packetBadgeStyle(String background, String color) {
+        return "-fx-background-color: " + background + "; -fx-text-fill: " + color + ";"
+                + "-fx-background-radius: 999; -fx-padding: 4 10 4 10; -fx-font-weight: 900;";
     }
 
     private String inputStyle() {

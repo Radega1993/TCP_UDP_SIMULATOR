@@ -7,19 +7,26 @@ import com.example.simulator.presentation.layers.EncapsulationSnapshot;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.shape.Circle;
 
+import java.io.InputStream;
 import java.util.function.Consumer;
 
 public class LayersLearningView extends BorderPane {
     private final Consumer<String> packetStructureOpener;
+    private final Runnable onHome;
+    private final Runnable onTheory;
+    private final Runnable onHelp;
 
     private final LayersSidebar sidebar = new LayersSidebar();
     private final LayersContextSidebar contextSidebar = new LayersContextSidebar();
@@ -42,13 +49,17 @@ public class LayersLearningView extends BorderPane {
     private Packet selectedPacket;
     private String currentMessage = "HOLA";
 
-    public LayersLearningView(Consumer<String> packetStructureOpener) {
+    public LayersLearningView(Consumer<String> packetStructureOpener, Runnable onHome, Runnable onTheory, Runnable onHelp) {
         this.packetStructureOpener = packetStructureOpener;
+        this.onHome = onHome;
+        this.onTheory = onTheory;
+        this.onHelp = onHelp;
         this.headerDetailsPanel = new HeaderDetailsPanel(packetStructureOpener);
 
         setStyle(UiTheme.APP_BACKGROUND);
         setPadding(new Insets(0));
 
+        setTop(buildTopbar());
         setCenter(buildBody());
         setBottom(footerPanel);
         BorderPane.setMargin(footerPanel, new Insets(18, 0, 0, 0));
@@ -72,6 +83,18 @@ public class LayersLearningView extends BorderPane {
         refreshView();
     }
 
+    public void resetView() {
+        currentMode = LayersMode.COMPARISON;
+        currentLevel = LearningLevel.BASIC;
+        currentProtocol = ProtocolType.TCP;
+        selectedPacket = null;
+        currentMessage = "HOLA";
+        sidebar.setSelectedMode(currentMode);
+        sidebar.setLearningLevel(currentLevel);
+        sidebar.setProtocol(currentProtocol);
+        refreshView();
+    }
+
     public void updatePacketContext(Packet packet, ProtocolType protocolType, String message) {
         selectedPacket = packet;
         if (protocolType != null) {
@@ -84,24 +107,37 @@ public class LayersLearningView extends BorderPane {
         refreshView();
     }
 
-    private Node buildHeader() {
+    private Node buildTopbar() {
         HBox row = new HBox(16);
         row.setAlignment(Pos.CENTER_LEFT);
         row.setPadding(new Insets(0, 18, 0, 18));
         row.setMinHeight(58);
         row.setPrefHeight(58);
-        row.setStyle("-fx-background-color: #ffffff; -fx-border-color: #d9e6f2; -fx-border-width: 0 0 1 0;");
+        row.setStyle("-fx-background-color: #ffffff;"
+                + "-fx-border-color: transparent transparent #d9e6f2 transparent;"
+                + "-fx-border-width: 0 0 1 0; -fx-effect: dropshadow(gaussian, rgba(17,42,67,0.04), 12, 0.2, 0, 2);");
 
-        Label brand = new Label("☰  AulaRed");
-        brand.setStyle("-fx-text-fill: #142d4c; -fx-font-size: 18px; -fx-font-weight: 900;");
+        StackPane menu = new StackPane(icon("/icons/menu.svg", 20));
+        menu.setOnMouseClicked(event -> onHome.run());
+        menu.setStyle("-fx-min-width: 34; -fx-min-height: 34; -fx-alignment: center;"
+                + "-fx-background-color: #e8f1ff; -fx-background-radius: 10; -fx-cursor: hand;");
+        Label brand = new Label("AulaRed");
+        brand.setStyle("-fx-font-size: 17px; -fx-font-weight: 800; -fx-text-fill: #102a43;");
+        HBox brandBox = new HBox(12, menu, brand);
+        brandBox.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(brandBox, Priority.ALWAYS);
+
         Label mode = pill("Modelo de capas: TCP/IP vs OSI", "#fff2e9", "#f25c05");
-        Label ready = pill("✦ Listo para explorar", "#e7f8ef", "#087f4f");
+        Label ready = pill("Listo para explorar", "#e7f8ef", "#087f4f");
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        Label reset = action("↻ Reiniciar");
-        Label compact = action("⌘ Vista compacta");
-        Label help = action("? Ayuda");
-        row.getChildren().addAll(brand, mode, ready, spacer, reset, compact, help);
+        Button reset = ghostButton("Reiniciar vista", "/icons/refresh.svg");
+        reset.setOnAction(event -> resetView());
+        Button theory = ghostButton("Teoría", "/icons/info.svg");
+        theory.setOnAction(event -> onTheory.run());
+        Button help = ghostButton("Ayuda", "/icons/help.svg");
+        help.setOnAction(event -> onHelp.run());
+        row.getChildren().addAll(brandBox, mode, ready, spacer, reset, theory, help);
         return row;
     }
 
@@ -295,6 +331,36 @@ public class LayersLearningView extends BorderPane {
         return label;
     }
 
+    private Button ghostButton(String text, String iconPath) {
+        Button button = new Button(text);
+        button.setGraphic(icon(iconPath, 16));
+        button.setGraphicTextGap(8);
+        button.setMinHeight(38);
+        button.setStyle("-fx-background-color: #ffffff; -fx-border-color: #d9e6f2;"
+                + "-fx-background-radius: 8; -fx-border-radius: 8;"
+                + "-fx-text-fill: #173452; -fx-font-weight: 800; -fx-padding: 0 14 0 14;");
+        return button;
+    }
+
+    private Node icon(String iconPath, double size) {
+        String path = iconPath.endsWith(".svg")
+                ? iconPath.substring(0, iconPath.length() - 4) + ".png"
+                : iconPath;
+        try (InputStream stream = LayersLearningView.class.getResourceAsStream(path)) {
+            if (stream != null) {
+                ImageView view = new ImageView(new Image(stream));
+                view.setFitWidth(size);
+                view.setFitHeight(size);
+                view.setPreserveRatio(true);
+                return view;
+            }
+        } catch (Exception ignored) {
+        }
+        Label fallback = new Label("•");
+        fallback.setStyle("-fx-text-fill: #f25c05; -fx-font-weight: 900;");
+        return fallback;
+    }
+
     private Label fieldLabel(String text) {
         Label label = new Label(text);
         label.setStyle("-fx-text-fill: #193753; -fx-font-size: 13px; -fx-font-weight: 900;");
@@ -313,7 +379,10 @@ public class LayersLearningView extends BorderPane {
         b.setPadding(new Insets(11, 10, 11, 10));
         a.setStyle("-fx-background-color: #2f80ed; -fx-text-fill: white; -fx-font-weight: 900;");
         b.setStyle("-fx-background-color: white; -fx-text-fill: #183653; -fx-font-weight: 900;");
-        a.setOnMouseClicked(event -> currentMode = LayersMode.COMPARISON);
+        a.setOnMouseClicked(event -> {
+            currentMode = LayersMode.COMPARISON;
+            refreshView();
+        });
         b.setOnMouseClicked(event -> {
             currentMode = LayersMode.ENCAPSULATION;
             refreshView();
